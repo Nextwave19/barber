@@ -25,6 +25,7 @@ def init_free_slots():
     return free_slots
 
 free_slots = init_free_slots()
+chat_history = []  # שמירת השיחה
 
 @app.route("/")
 def index():
@@ -63,8 +64,17 @@ def book():
 
 @app.route("/ask", methods=["POST"])
 def ask():
+    global chat_history
     data = request.get_json()
     user_message = data.get("message", "")
+
+    # מוסיף את ההודעה של המשתמש
+    chat_history.append({"role": "user", "content": user_message})
+    if len(chat_history) > 11:
+        chat_history = chat_history[-11:]  # שומר רק 11 אחרונות
+
+    # הודעת פתיחה למערכת
+    messages = [{"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."}] + chat_history
 
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     if not GITHUB_TOKEN:
@@ -77,10 +87,7 @@ def ask():
 
     payload = {
         "model": "openai/gpt-4.1",
-        "messages": [
-            {"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."},
-            {"role": "user", "content": user_message}
-        ],
+        "messages": messages,
         "temperature": 0.7,
         "max_tokens": 100
     }
@@ -91,8 +98,10 @@ def ask():
             headers=headers, json=payload)
         response.raise_for_status()
         output = response.json()
-        print("GitHub AI API response:", output)
         answer = output["choices"][0]["message"]["content"].strip()
+        chat_history.append({"role": "assistant", "content": answer})
+        if len(chat_history) > 11:
+            chat_history = chat_history[-11:]  # שוב שומר רק 11
         return jsonify({"answer": answer})
     except Exception as e:
         print("Error calling GitHub AI API:", e)
