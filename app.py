@@ -110,12 +110,12 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'yoav.gablinger@gmail.com'     
-    msg['To'] = 'yoav.gablinger@gmail.com'        
+    msg['From'] = 'nextwaveaiandweb@gmail.com@gmail.com'     
+    msg['To'] = 'nextwaveaiandweb@gmail.com@gmail.com'        
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('yoav.gablinger@gmail.com', 'qaai nsck nbvl lmqg')  
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
