@@ -110,8 +110,8 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com@gmail.com'     
-    msg['To'] = 'nextwaveaiandweb@gmail.com@gmail.com'        
+    msg['From'] = 'nextwaveaiandweb@gmail.com'     
+    msg['To'] = 'nextwaveaiandweb@gmail.com'        
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
