@@ -45,6 +45,9 @@ def login():
 
         admin_user = os.getenv("ADMIN_USERNAME")
         admin_pass = os.getenv("ADMIN_PASSWORD")
+        print("Admin from env:", admin_user)
+        print("Password from env:", admin_pass)
+
 
         # אם זה האדמין – נדרשת סיסמה
         if username == admin_user:
