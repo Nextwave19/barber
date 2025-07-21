@@ -170,6 +170,23 @@
 </head>
 <body>
 
+   <header>
+    <h1>💇‍♀️ ברוך הבא ל־HairBoss</h1>
+    {% if session.username %}
+      <div style="float: right; margin-top: -40px; margin-right: 20px;">
+        👤 שלום, {{ session.username }} |
+        <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
+        {% if session.is_admin %}
+          | <a href="/admin">🔧 ניהול</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <div style="float: right; margin-top: -40px; margin-right: 20px;">
+        <a href="/login">🔐 התחברות</a>
+      </div>
+    {% endif %}
+  </header>
+
 <div style="text-align: right; margin-bottom: 10px;">
   {% if session.admin_logged_in %}
     <a href="/admin" style="margin-left: 10px;">⚙️ ניהול</a>
