@@ -197,6 +197,12 @@ Price: {price}₪
     except Exception as e:
         print("Failed to send email:", e)
 
+@app.route("/admin-command")
+def admin_command():
+    if not session.get("is_admin"):
+        return redirect("/")
+    return render_template("admin_command.html")
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
