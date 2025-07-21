@@ -1,13 +1,12 @@
 import requests
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session
+from flask import Flask, request, jsonify, render_template, redirect, session
 import os
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
-import json
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey")
+app.secret_key = os.getenv("SECRET_KEY") or "default_secret_key"
 
 # שירותים ומחירים
 services_prices = {
@@ -17,7 +16,7 @@ services_prices = {
     "Color": 250
 }
 
-# יצירת זמינות התחלתית
+# אתחול תאריכים זמינים
 def init_free_slots():
     today = datetime.today()
     times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -31,37 +30,51 @@ def init_free_slots():
 free_slots = init_free_slots()
 chat_history = []
 
-# קובץ config לניהול זמינות
-CONFIG_FILE = "config.json"
+# --- דפי HTML ---
 
-def load_config():
-    if not os.path.exists(CONFIG_FILE):
-        return {"booking_enabled": True}
-    with open(CONFIG_FILE, "r") as f:
-        return json.load(f)
-
-def save_config(config):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(config, f)
-
-# דף הבית
 @app.route("/")
 def index():
-    config = load_config()
-    return render_template("index.html", booking_enabled=config.get("booking_enabled", True))
+    return render_template("index.html")
 
-# API לזמינות
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        admin_user = os.getenv("ADMIN_USERNAME")
+        admin_pass = os.getenv("ADMIN_PASSWORD")
+
+        if username == admin_user and password == admin_pass:
+            session["is_admin"] = True
+            return redirect("/admin")
+        else:
+            return render_template("login.html", error="שם משתמש או סיסמה לא נכונים")
+    
+    return render_template("login.html")
+
+@app.route("/admin")
+def admin_panel():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return """
+    <h1>👑 ברוך הבא לפאנל אדמין של HairBoss</h1>
+    <p>כאן בעתיד תוכל לשלוט על זמינות, הצגת הזמנות ועוד.</p>
+    <a href='/logout'>התנתק</a>
+    """
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+# --- API JSON ---
+
 @app.route("/availability")
 def availability():
     return jsonify(free_slots)
 
-# הזמנת תור
 @app.route("/book", methods=["POST"])
 def book():
-    config = load_config()
-    if not config.get("booking_enabled", True):
-        return jsonify({"error": "ההזמנות סגורות כרגע."}), 403
-
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -80,6 +93,7 @@ def book():
         return jsonify({"error": "Unknown service."}), 400
 
     free_slots[date].remove(time)
+
     try:
         send_email(name, phone, date, time, service, price)
     except Exception as e:
@@ -87,7 +101,6 @@ def book():
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
-# בוט AI
 @app.route("/ask", methods=["POST"])
 def ask():
     global chat_history
@@ -131,7 +144,6 @@ def ask():
         print("Error calling GitHub AI API:", e)
         return jsonify({"error": str(e)}), 500
 
-# שליחת מייל
 def send_email(name, phone, date, time, service, price):
     msg = EmailMessage()
     msg.set_content(f"""
@@ -156,38 +168,8 @@ Price: {price}₪
     except Exception as e:
         print("Failed to send email:", e)
 
-# התחברות
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-        if username == "admin" and password == os.environ.get("ADMIN_PASSWORD", "1234"):
-            session['admin_logged_in'] = True
-            return redirect(url_for("admin"))
-    return render_template("login.html")
+# --- הפעלת האפליקציה ---
 
-# יציאה
-@app.route("/logout")
-def logout():
-    session.pop('admin_logged_in', None)
-    return redirect(url_for("index"))
-
-# ניהול זמינות
-@app.route("/admin", methods=["GET", "POST"])
-def admin():
-    if not session.get("admin_logged_in"):
-        return redirect(url_for("login"))
-
-    config = load_config()
-    if request.method == "POST":
-        enabled = request.form.get("booking_enabled") == "on"
-        config["booking_enabled"] = enabled
-        save_config(config)
-
-    return render_template("admin.html", config=config)
-
-# הפעלת השרת
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
