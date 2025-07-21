@@ -40,21 +40,23 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')  # או מה שהגדרת ב־Render secrets
+    admin_user = os.environ.get('ADMIN_USERNAME')
+    admin_password = os.environ.get('ADMIN_PASSWORD')
 
     if request.method == 'POST':
         username = request.form['username']
         password = request.form.get('password', '')
 
         if username == admin_user:
-            admin_password = os.environ.get('ADMIN_PASSWORD')
             if password == admin_password:
                 session['username'] = username
+                session['is_admin'] = True
                 return redirect('/admin-command')
             else:
                 error = "סיסמה שגויה"
         else:
             session['username'] = username
+            session['is_admin'] = False
             return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
