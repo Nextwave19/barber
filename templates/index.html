@@ -170,6 +170,16 @@
 </head>
 <body>
 
+<div style="text-align: right; margin-bottom: 10px;">
+  {% if session.admin_logged_in %}
+    <a href="/admin" style="margin-left: 10px;">⚙️ ניהול</a>
+    <a href="/logout" style="background: #e74c3c; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none;">Logout</a>
+  {% else %}
+    <a href="/login" style="background: #3498db; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none;">Login</a>
+  {% endif %}
+</div>
+  
+
 <h1>HairBoss ✂️</h1>
 <h2>Book Your Appointment</h2>
 
