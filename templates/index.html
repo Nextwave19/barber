@@ -173,7 +173,7 @@
 <header>
   {% if session.username %}
     <div style="float: right; margin-top: -5px; margin-right: -80px;">
-      👤 שלום, {{ session.username }} |
+      👤 !שלום, {{ session.username }} |
       <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
       {% if session.is_admin %}
         | <a href="/admin">🔧 ניהול</a>
