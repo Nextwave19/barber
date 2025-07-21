@@ -1,76 +1,99 @@
-import os
-import json
-import requests
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
-import smtplib
-from email.message import EmailMessage
+from flask import Flask, render_template, request, jsonify, redirect, session
 from datetime import datetime, timedelta
+import json
+import os
+import secrets
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
+app.secret_key = secrets.token_hex(16)
 
-# טוען משתמשים מהסביבה
-def load_users():
-    users_json = os.environ.get("USERS_JSON")
-    if not users_json:
-        return {}
-    return json.loads(users_json)
+DATA_FILE = 'appointments.json'
 
-users = load_users()
+# הגדרות מהסביבה
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASS = os.environ.get("ADMIN_PASS", "1234")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-services_prices = {
-    "Men's Haircut": 80,
-    "Women's Haircut": 120,
-    "Blow Dry": 70,
-    "Color": 250
-}
+# מצבים אדמיניים
+booking_enabled = True
+bot_enabled = True
 
-def init_free_slots():
-    today = datetime.today()
-    times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-             "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
-    free_slots = {}
-    for i in range(7):
-        date_str = (today + timedelta(days=i)).strftime("%d/%m")
-        free_slots[date_str] = times.copy()
-    return free_slots
+# עוזר לטעינת נתונים
+def load_data():
+    if not os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'w') as f:
+            json.dump({}, f)
+    with open(DATA_FILE, 'r') as f:
+        return json.load(f)
 
-free_slots = init_free_slots()
-chat_history = []
+# עוזר לשמירת נתונים
+def save_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
 
-@app.route("/")
+# עוזר ליצירת ימים עם זמינות
+def get_available_days():
+    data = load_data()
+    days = {}
+    today = datetime.now()
+    for i in range(5):
+        date = today + timedelta(days=i)
+        date_str = date.strftime('%d/%m')
+        if date_str not in data:
+            data[date_str] = []
+        taken = data[date_str]
+        all_slots = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+                     "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
+        available = [slot for slot in all_slots if slot not in [appt["time"] for appt in taken]]
+        days[date_str] = available
+    save_data(data)
+    return days
+
+# דף ראשי
+@app.route('/')
 def index():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    return render_template("index.html", username=session['username'], role=session.get('role', 'user'))
+    return render_template('index.html', is_admin=session.get('is_admin', False),
+                           bot_enabled=bot_enabled, booking_enabled=booking_enabled)
 
-@app.route("/login", methods=["GET", "POST"])
+# דף התחברות
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        if username in users and users[username]["password"] == password:
-            session['username'] = username
-            session['role'] = users[username].get("role", "user")
-            return redirect(url_for("index"))
-        return "Invalid credentials", 403
-    return '''<form method="post">
-                <input name="username" placeholder="Username" required>
-                <input name="password" type="password" placeholder="Password" required>
-                <button type="submit">Login</button>
-              </form>'''
+    if request.method == 'POST':
+        user = request.form.get('username')
+        pw = request.form.get('password')
+        if user == ADMIN_USER and pw == ADMIN_PASS:
+            session['is_admin'] = True
+            return redirect('/admin-panel')
+        else:
+            return "Login failed", 403
+    return '''
+        <form method="post">
+            <input name="username" placeholder="Username" required><br>
+            <input name="password" type="password" placeholder="Password" required><br>
+            <button type="submit">Login</button>
+        </form>
+    '''
 
-@app.route("/logout")
+# דף ליציאה
+@app.route('/logout')
 def logout():
-    session.clear()
-    return redirect(url_for("login"))
+    session.pop('is_admin', None)
+    return redirect('/')
 
-@app.route("/availability")
+# זמינות
+@app.route('/availability')
 def availability():
-    return jsonify(free_slots)
+    if not booking_enabled:
+        return jsonify({})
+    return jsonify(get_available_days())
 
-@app.route("/book", methods=["POST"])
+# שליחת בקשת הזמנה
+@app.route('/book', methods=['POST'])
 def book():
+    if not booking_enabled:
+        return jsonify({'error': 'Booking is disabled by admin.'})
+
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -79,88 +102,78 @@ def book():
     service = data.get("service")
 
     if not all([name, phone, date, time, service]):
-        return jsonify({"error": "Missing fields"}), 400
+        return jsonify({"error": "Missing data"})
 
-    if date not in free_slots or time not in free_slots[date]:
-        return jsonify({"error": "No availability at that time."}), 400
+    db = load_data()
+    appointments = db.get(date, [])
 
-    price = services_prices.get(service)
-    if not price:
-        return jsonify({"error": "Unknown service."}), 400
+    if any(appt["time"] == time for appt in appointments):
+        return jsonify({"error": "This time is already booked"})
 
-    free_slots[date].remove(time)
-    try:
-        send_email(name, phone, date, time, service, price)
-    except Exception as e:
-        print("Error sending email:", e)
+    appointments.append({"name": name, "phone": phone, "time": time, "service": service})
+    db[date] = appointments
+    save_data(db)
 
-    return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
+    # שליחת טלגרם אם אפשרי
+    if BOT_TOKEN and CHAT_ID and bot_enabled:
+        import requests
+        msg = f"📅 New Appointment:\n👤 {name}\n📞 {phone}\n🕒 {date} {time}\n💇 {service}"
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
 
-@app.route("/ask", methods=["POST"])
-def ask():
-    global chat_history
+    return jsonify({"message": "Appointment booked successfully!"})
+
+# API של הבוט
+@app.route('/ask', methods=['POST'])
+def ask_bot():
+    if not bot_enabled:
+        return jsonify({"answer": "The bot is currently disabled."})
+    message = request.json.get('message', '')
+    if "hours" in message.lower():
+        return jsonify({"answer": "We're open from 9:00 to 15:00 Sunday to Thursday."})
+    elif "location" in message.lower():
+        return jsonify({"answer": "We are located at HairBoss Street 123."})
+    else:
+        return jsonify({"answer": "I'm here to help! Try asking about hours or location."})
+
+# דף אדמין
+@app.route('/admin-panel')
+def admin_panel():
+    if not session.get('is_admin'):
+        return "Access denied", 403
+    return render_template("admin_command_panel.html")
+
+# קומנד של אדמין
+@app.route('/admin-command', methods=['POST'])
+def admin_command():
+    if not session.get('is_admin'):
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    global booking_enabled, bot_enabled
+
     data = request.get_json()
-    user_message = data.get("message", "")
-    chat_history.append({"role": "user", "content": user_message})
-    if len(chat_history) > 11:
-        chat_history = chat_history[-11:]
+    command = data.get('command')
 
-    messages = [{"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."}] + chat_history
+    if command == 'enable_booking':
+        booking_enabled = True
+        return jsonify({'message': 'Booking enabled'})
+    elif command == 'disable_booking':
+        booking_enabled = False
+        return jsonify({'message': 'Booking disabled'})
+    elif command == 'enable_bot':
+        bot_enabled = True
+        return jsonify({'message': 'Bot enabled'})
+    elif command == 'disable_bot':
+        bot_enabled = False
+        return jsonify({'message': 'Bot disabled'})
+    elif command == 'reset_day':
+        today = datetime.now().strftime('%d/%m')
+        db = load_data()
+        db[today] = []
+        save_data(db)
+        return jsonify({'message': f"Appointments for {today} reset."})
+    else:
+        return jsonify({'error': 'Unknown command'}), 400
 
-    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
-    if not GITHUB_TOKEN:
-        return jsonify({"error": "Missing GitHub API token"}), 500
-
-    headers = {
-        "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "openai/gpt-4.1",
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": 100
-    }
-
-    try:
-        response = requests.post("https://models.github.ai/inference/v1/chat/completions",
-                                 headers=headers, json=payload)
-        response.raise_for_status()
-        output = response.json()
-        answer = output["choices"][0]["message"]["content"].strip()
-        chat_history.append({"role": "assistant", "content": answer})
-        if len(chat_history) > 11:
-            chat_history = chat_history[-11:]
-        return jsonify({"answer": answer})
-    except Exception as e:
-        print("Error calling GitHub AI API:", e)
-        return jsonify({"error": str(e)}), 500
-
-def send_email(name, phone, date, time, service, price):
-    msg = EmailMessage()
-    msg.set_content(f"""
-New appointment at HairBoss:
-Name: {name}
-Phone: {phone}
-Date: {date}
-Time: {time}
-Service: {service}
-Price: {price}₪
-""")
-    msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'
-    msg['To'] = 'nextwaveaiandweb@gmail.com'
-
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')
-        server.send_message(msg)
-        server.quit()
-        print("Email sent successfully")
-    except Exception as e:
-        print("Failed to send email:", e)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 3000))
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(debug=True)
