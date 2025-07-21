@@ -171,9 +171,8 @@
 <body>
 
 <header>
-  <h1>HairBoss ברוך הבא ל‏</h1>
   {% if session.username %}
-    <div style="float: right; margin-top: -40px; margin-right: 40px;">
+    <div style="float: right; margin-top: -10px; margin-right: 40px;">
       👤 שלום, {{ session.username }} |
       <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
       {% if session.is_admin %}
