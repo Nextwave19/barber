@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Command Panel</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to right, #e0f7fa, #fff);
+      margin: 0;
+      padding: 30px;
+    }
+    .admin-container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    .admin-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 30px;
+    }
+    .admin-btn {
+      flex: 1 1 40%;
+      padding: 14px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+    .admin-btn:hover {
+      background: #2c80b4;
+    }
+    .status {
+      text-align: center;
+      margin-top: 20px;
+      font-weight: bold;
+      color: #27ae60;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 25px;
+      color: #2980b9;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <h1>Admin Command Panel</h1>
+
+    <div class="admin-buttons">
+      <button class="admin-btn" onclick="sendCommand('enable_booking')">Enable Booking</button>
+      <button class="admin-btn" onclick="sendCommand('disable_booking')">Disable Booking</button>
+      <button class="admin-btn" onclick="sendCommand('enable_bot')">Enable Bot</button>
+      <button class="admin-btn" onclick="sendCommand('disable_bot')">Disable Bot</button>
+      <button class="admin-btn" onclick="sendCommand('reset_slots')">Reset All Slots</button>
+      <button class="admin-btn" onclick="sendCommand('shutdown')">Shutdown Server</button>
+    </div>
+
+    <div class="status" id="statusMessage"></div>
+
+    <a href="/" class="back-link">← Back to Home</a>
+  </div>
+
+  <script>
+    async function sendCommand(command) {
+      const res = await fetch('/admin-command', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ command })
+      });
+      const data = await res.json();
+      const statusDiv = document.getElementById('statusMessage');
+      if (data.message) {
+        statusDiv.textContent = data.message;
+        statusDiv.style.color = '#27ae60';
+      } else if (data.error) {
+        statusDiv.textContent = data.error;
+        statusDiv.style.color = 'red';
+      }
+    }
+  </script>
+</body>
+</html>
