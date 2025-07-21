@@ -17,21 +17,19 @@ services_prices = {
 }
 
 # אתחול תאריכים זמינים
-all_times = [
-    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"
-]
-
 def init_free_slots():
     today = datetime.today()
+    times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+             "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
     for i in range(7):
         date_str = (today + timedelta(days=i)).strftime("%d/%m")
-        free_slots[date_str] = all_times.copy()
+        free_slots[date_str] = times.copy()
     return free_slots
 
 free_slots = init_free_slots()
 chat_history = []
+custom_knowledge = []
 
 # --- דפי HTML ---
 
@@ -52,7 +50,6 @@ def login():
             return redirect("/admin")
         else:
             return render_template("login.html", error="שם משתמש או סיסמה לא נכונים")
-
     return render_template("login.html")
 
 @app.route("/admin")
@@ -60,26 +57,6 @@ def admin_panel():
     if not session.get("is_admin"):
         return redirect("/login")
     return render_template("admin.html", free_slots=free_slots)
-
-@app.route("/admin/update_slot", methods=["POST"])
-def update_slot():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    date = request.form.get("date")
-    time = request.form.get("time")
-    action = request.form.get("action")
-
-    if date and time:
-        if action == "remove":
-            if time in free_slots.get(date, []):
-                free_slots[date].remove(time)
-        elif action == "add":
-            if date not in free_slots:
-                free_slots[date] = []
-            if time not in free_slots[date] and time in all_times:
-                free_slots[date].append(time)
-                free_slots[date].sort()
-    return redirect("/admin")
 
 @app.route("/logout")
 def logout():
@@ -120,6 +97,38 @@ def book():
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
+@app.route("/slot", methods=["POST"])
+def update_slot():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    date = request.form.get("date")
+    time = request.form.get("time")
+    action = request.form.get("action")
+
+    if not date or not time or action not in ["remove", "add"]:
+        return "Invalid input", 400
+
+    if action == "remove":
+        if time in free_slots.get(date, []):
+            free_slots[date].remove(time)
+    elif action == "add":
+        if time not in free_slots.get(date, []):
+            free_slots[date].append(time)
+            free_slots[date].sort()
+    return redirect("/admin")
+
+@app.route("/bot-knowledge", methods=["POST"])
+def update_bot_knowledge():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    action = request.form.get("action")
+    content = request.form.get("content")
+    if action == "add" and content:
+        custom_knowledge.append(content.strip())
+    elif action == "remove" and content:
+        custom_knowledge[:] = [item for item in custom_knowledge if item != content.strip()]
+    return redirect("/admin")
+
 @app.route("/ask", methods=["POST"])
 def ask():
     global chat_history
@@ -130,7 +139,11 @@ def ask():
     if len(chat_history) > 11:
         chat_history = chat_history[-11:]
 
-    messages = [{"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."}] + chat_history
+    messages = [
+        {"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."},
+        *[{"role": "system", "content": f"Additional info: {info}"} for info in custom_knowledge],
+        *chat_history
+    ]
 
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
     if not GITHUB_TOKEN:
