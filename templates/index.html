@@ -166,6 +166,32 @@
   #bot-input button:hover {
     background: #1e8449;
   }
+
+  /* Admin panel styling */
+  #admin-panel {
+    margin-top: 40px;
+    padding: 20px;
+    border: 2px dashed #555;
+    background: #fff5e6;
+    border-radius: 10px;
+  }
+  #admin-panel h3 {
+    margin-bottom: 15px;
+    text-align: center;
+  }
+  .admin-btn {
+    padding: 10px 14px;
+    margin: 5px;
+    border: none;
+    border-radius: 8px;
+    background: #e67e22;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .admin-btn:hover {
+    background: #d35400;
+  }
 </style>
 </head>
 <body>
@@ -174,7 +200,6 @@
 <h2>Book Your Appointment</h2>
 
 <div id="response"></div>
-
 <div id="days-buttons"></div>
 <div id="availability"></div>
 
@@ -208,6 +233,16 @@
     <button onclick="sendBotMessage()">Send</button>
   </div>
 </div>
+
+{% if is_admin %}
+<div id="admin-panel">
+  <h3>Admin Command Panel</h3>
+  <button class="admin-btn" onclick="sendAdminCommand('reset')">Reset Slots</button>
+  <button class="admin-btn" onclick="sendAdminCommand('disable_bot')">Disable Bot</button>
+  <button class="admin-btn" onclick="sendAdminCommand('enable_bot')">Enable Bot</button>
+  <button class="admin-btn" onclick="sendAdminCommand('shutdown')">Shutdown Server</button>
+</div>
+{% endif %}
 
 <script>
 let allDates = [];
@@ -340,6 +375,16 @@ function resizeBot() {
     bot.style.width = '520px';
     bot.style.height = '520px';
   }
+}
+
+async function sendAdminCommand(command) {
+  const res = await fetch('/admin-command', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ command })
+  });
+  const data = await res.json();
+  alert(data.message || data.error || "Unknown response");
 }
 
 loadAvailability();
