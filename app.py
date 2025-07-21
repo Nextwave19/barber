@@ -37,45 +37,27 @@ custom_knowledge = []
 def index():
     return render_template("index.html")
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+    error = None
+    admin_user = os.environ.get('ADMIN_USERNAME')  # או מה שהגדרת ב־Render secrets
 
-        admin_user = os.getenv("ADMIN_USERNAME")
-        admin_pass = os.getenv("ADMIN_PASSWORD")
-        
-        # אם זה האדמין – נדרשת סיסמה
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form.get('password', '')
+
         if username == admin_user:
-            if password != admin_pass:
-                return render_template("login.html", error="סיסמה שגויה")
-            session["is_admin"] = True
-            session["username"] = username
-            return redirect("/admin")
+            admin_password = os.environ.get('ADMIN_PASSWORD')
+            if password == admin_password:
+                session['username'] = username
+                return redirect('/admin-command')
+            else:
+                error = "סיסמה שגויה"
+        else:
+            session['username'] = username
+            return redirect('/')
 
-        # משתמש רגיל – לא אמור למלא סיסמה בכלל
-        if password:
-            return render_template("login.html", error="משתמש רגיל לא צריך סיסמה")
-
-        session["username"] = username
-        session["is_admin"] = False
-        return redirect("/")
-
-    return render_template("login.html")
-
-
-@app.route("/admin")
-def admin_panel():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    return render_template("admin.html", free_slots=free_slots)
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/")
-
+    return render_template('login.html', error=error, admin_user=admin_user)
 # --- API JSON ---
 
 @app.route("/availability")
