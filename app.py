@@ -4,9 +4,11 @@ import os
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
-
 import json
 
+app = Flask(__name__)
+
+# ------------------- ניהול מצב מערכת -------------------
 STATE_FILE = "site_state.json"
 
 def get_site_state():
@@ -22,9 +24,7 @@ def set_site_state(updates):
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
-
-app = Flask(__name__)
-
+# ------------------- הגדרות שירותים וזמנים -------------------
 services_prices = {
     "Men's Haircut": 80,
     "Women's Haircut": 120,
@@ -43,10 +43,15 @@ def init_free_slots():
     return free_slots
 
 free_slots = init_free_slots()
-chat_history = []  # שמירת השיחה
+chat_history = []
+
+# ------------------- ראוטים -------------------
 
 @app.route("/")
 def index():
+    state = get_site_state()
+    if not state.get("active"):
+        return "<h1>האתר סגור זמנית ע״י המנהל</h1><p>חזור מאוחר יותר.</p>"
     return render_template("index.html")
 
 @app.route("/availability")
@@ -55,6 +60,10 @@ def availability():
 
 @app.route("/book", methods=["POST"])
 def book():
+    state = get_site_state()
+    if not state.get("appointments_open"):
+        return jsonify({"error": "הזמנות חסומות כרגע ע״י המנהל."}), 403
+
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -82,16 +91,18 @@ def book():
 
 @app.route("/ask", methods=["POST"])
 def ask():
+    state = get_site_state()
+    if not state.get("bot_enabled"):
+        return jsonify({"error": "הבוט מושבת כרגע ע״י המנהל."}), 403
+
     global chat_history
     data = request.get_json()
     user_message = data.get("message", "")
 
-    # מוסיף את ההודעה של המשתמש
     chat_history.append({"role": "user", "content": user_message})
     if len(chat_history) > 11:
-        chat_history = chat_history[-11:]  # שומר רק 11 אחרונות
+        chat_history = chat_history[-11:]
 
-    # הודעת פתיחה למערכת
     messages = [{"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."}] + chat_history
 
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -119,11 +130,23 @@ def ask():
         answer = output["choices"][0]["message"]["content"].strip()
         chat_history.append({"role": "assistant", "content": answer})
         if len(chat_history) > 11:
-            chat_history = chat_history[-11:]  # שוב שומר רק 11
+            chat_history = chat_history[-11:]
         return jsonify({"answer": answer})
     except Exception as e:
         print("Error calling GitHub AI API:", e)
         return jsonify({"error": str(e)}), 500
+
+@app.route("/admin/toggle", methods=["POST"])
+def admin_toggle():
+    data = request.get_json()
+    key = data.get("key")
+    value = data.get("value")
+    if key not in ["active", "appointments_open", "bot_enabled"]:
+        return jsonify({"error": "Invalid key"}), 400
+    set_site_state({key: value})
+    return jsonify({"message": f"{key} set to {value}"})
+
+# ------------------- שליחת אימייל -------------------
 
 def send_email(name, phone, date, time, service, price):
     msg = EmailMessage()
@@ -148,6 +171,8 @@ Price: {price}₪
         print("Email sent successfully")
     except Exception as e:
         print("Failed to send email:", e)
+
+# ------------------- הפעלה -------------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
