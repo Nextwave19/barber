@@ -2,89 +2,124 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Command</title>
+    <title>ניהול HairBoss</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            padding: 40px;
             background: #f9f9f9;
+            padding: 20px;
+            text-align: right;
         }
-        h2 {
-            margin-top: 40px;
+        h1 {
+            color: #333;
         }
-        .day-block {
+        .section {
             background: white;
+            padding: 20px;
+            border-radius: 16px;
             margin-bottom: 20px;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 0 6px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
         }
-        .hour-button {
+        .slots-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        form.inline {
             display: inline-block;
-            margin: 4px;
+            margin: 2px;
+        }
+        button {
             padding: 5px 10px;
-            font-size: 0.85em;
+            font-size: 0.9em;
+            border-radius: 8px;
             border: none;
-            border-radius: 6px;
-            background-color: #4CAF50;
+            background: #4CAF50;
             color: white;
             cursor: pointer;
         }
-        .hour-button.disabled {
-            background-color: #aaa;
-            cursor: not-allowed;
+        button.remove {
+            background: #f44336;
         }
-        form.inline {
-            display: inline;
+        button.add {
+            background: #2196F3;
         }
-        .bot-section {
-            margin-top: 40px;
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 0 8px rgba(0,0,0,0.1);
-        }
-        textarea {
-            width: 100%;
-            height: 60px;
-            margin-bottom: 10px;
+        input[type="text"], select {
+            padding: 6px;
+            margin: 5px 0;
             border-radius: 8px;
-            padding: 10px;
+            border: 1px solid #ccc;
         }
         .logout {
-            position: fixed;
-            top: 20px;
-            left: 20px;
+            float: left;
+            background: #ccc;
+            color: black;
         }
     </style>
 </head>
 <body>
-    <a class="logout" href="/logout">התנתק</a>
-    <h1>ברוך הבא, מנהל</h1>
+    <h1>ברוך הבא, {{ session['username'] }} (מנהל)</h1>
+    <form method="GET" action="/logout">
+        <button class="logout">התנתק</button>
+    </form>
 
-    {% for date, times in free_slots.items() %}
-        <div class="day-block">
-            <h2>{{ date }}</h2>
-            {% for time in ["09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00"] %}
-                <form class="inline" method="POST" action="/slot">
+    <div class="section">
+        <h2>ניהול תורים לפי יום</h2>
+        {% for date, times in free_slots.items() %}
+            <div style="margin-bottom: 10px;">
+                <strong>{{ date }}</strong>
+                <form method="POST" action="/slot" class="inline">
                     <input type="hidden" name="date" value="{{ date }}">
-                    <input type="hidden" name="time" value="{{ time }}">
-                    <input type="hidden" name="action" value="{{ "remove" if time in times else "add" }}">
-                    <button class="hour-button {% if time not in times %}disabled{% endif %}">
-                        {{ time }}
-                    </button>
+                    <input type="hidden" name="time" value="*">
+                    <input type="hidden" name="action" value="remove">
+                    <button class="remove">ביטול כל התורים ביום זה</button>
                 </form>
-            {% endfor %}
-        </div>
-    {% endfor %}
+            </div>
+            <div class="slots-container">
+                {% for time in times %}
+                    <form method="POST" action="/slot" class="inline">
+                        <input type="hidden" name="date" value="{{ date }}">
+                        <input type="hidden" name="time" value="{{ time }}">
+                        <input type="hidden" name="action" value="remove">
+                        <button class="remove">{{ time }} ✖</button>
+                    </form>
+                {% endfor %}
+            </div>
+            <form method="POST" action="/slot" class="inline">
+                <input type="hidden" name="date" value="{{ date }}">
+                <label>הוסף שעה:</label>
+                <input type="text" name="time" placeholder="למשל 16:30" required>
+                <input type="hidden" name="action" value="add">
+                <button class="add">הוסף</button>
+            </form>
+            <hr>
+        {% endfor %}
+    </div>
 
-    <div class="bot-section">
-        <h2>ניהול ידע של הבוט</h2>
+    <div class="section">
+        <h2>עדכון ידע של הבוט</h2>
         <form method="POST" action="/bot-knowledge">
-            <textarea name="content" placeholder="כתוב מידע להוספה או מחיקה..."></textarea>
-            <button type="submit" name="action" value="add">הוסף</button>
-            <button type="submit" name="action" value="remove">מחק</button>
+            <label>הוסף מידע חדש:</label>
+            <input type="text" name="content" placeholder="למשל: שעות פעילות מיוחדות" required>
+            <input type="hidden" name="action" value="add">
+            <button class="add">הוסף</button>
         </form>
+
+        <form method="POST" action="/bot-knowledge">
+            <label>הסר מידע:</label>
+            <input type="text" name="content" placeholder="העתק טקסט להסרה" required>
+            <input type="hidden" name="action" value="remove">
+            <button class="remove">הסר</button>
+        </form>
+
+        <h3>מידע קיים:</h3>
+        <ul>
+            {% for item in custom_knowledge %}
+                <li>{{ item }}</li>
+            {% else %}
+                <li>אין מידע נוסף.</li>
+            {% endfor %}
+        </ul>
     </div>
 </body>
 </html>
