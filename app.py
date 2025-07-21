@@ -1,30 +1,23 @@
-import requests
-from flask import Flask, request, jsonify, render_template
 import os
+import json
+import requests
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
-import json
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "dev-secret")
 
-# ------------------- ניהול מצב מערכת -------------------
-STATE_FILE = "site_state.json"
+# טוען משתמשים מהסביבה
+def load_users():
+    users_json = os.environ.get("USERS_JSON")
+    if not users_json:
+        return {}
+    return json.loads(users_json)
 
-def get_site_state():
-    try:
-        with open(STATE_FILE, "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {"active": True, "appointments_open": True, "bot_enabled": True}
+users = load_users()
 
-def set_site_state(updates):
-    state = get_site_state()
-    state.update(updates)
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f)
-
-# ------------------- הגדרות שירותים וזמנים -------------------
 services_prices = {
     "Men's Haircut": 80,
     "Women's Haircut": 120,
@@ -45,14 +38,32 @@ def init_free_slots():
 free_slots = init_free_slots()
 chat_history = []
 
-# ------------------- ראוטים -------------------
-
 @app.route("/")
 def index():
-    state = get_site_state()
-    if not state.get("active"):
-        return "<h1>האתר סגור זמנית ע״י המנהל</h1><p>חזור מאוחר יותר.</p>"
-    return render_template("index.html")
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    return render_template("index.html", username=session['username'], role=session.get('role', 'user'))
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        if username in users and users[username]["password"] == password:
+            session['username'] = username
+            session['role'] = users[username].get("role", "user")
+            return redirect(url_for("index"))
+        return "Invalid credentials", 403
+    return '''<form method="post">
+                <input name="username" placeholder="Username" required>
+                <input name="password" type="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+              </form>'''
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 @app.route("/availability")
 def availability():
@@ -60,10 +71,6 @@ def availability():
 
 @app.route("/book", methods=["POST"])
 def book():
-    state = get_site_state()
-    if not state.get("appointments_open"):
-        return jsonify({"error": "הזמנות חסומות כרגע ע״י המנהל."}), 403
-
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -91,14 +98,9 @@ def book():
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    state = get_site_state()
-    if not state.get("bot_enabled"):
-        return jsonify({"error": "הבוט מושבת כרגע ע״י המנהל."}), 403
-
     global chat_history
     data = request.get_json()
     user_message = data.get("message", "")
-
     chat_history.append({"role": "user", "content": user_message})
     if len(chat_history) > 11:
         chat_history = chat_history[-11:]
@@ -122,9 +124,8 @@ def ask():
     }
 
     try:
-        response = requests.post(
-            "https://models.github.ai/inference/v1/chat/completions",
-            headers=headers, json=payload)
+        response = requests.post("https://models.github.ai/inference/v1/chat/completions",
+                                 headers=headers, json=payload)
         response.raise_for_status()
         output = response.json()
         answer = output["choices"][0]["message"]["content"].strip()
@@ -135,18 +136,6 @@ def ask():
     except Exception as e:
         print("Error calling GitHub AI API:", e)
         return jsonify({"error": str(e)}), 500
-
-@app.route("/admin/toggle", methods=["POST"])
-def admin_toggle():
-    data = request.get_json()
-    key = data.get("key")
-    value = data.get("value")
-    if key not in ["active", "appointments_open", "bot_enabled"]:
-        return jsonify({"error": "Invalid key"}), 400
-    set_site_state({key: value})
-    return jsonify({"message": f"{key} set to {value}"})
-
-# ------------------- שליחת אימייל -------------------
 
 def send_email(name, phone, date, time, service, price):
     msg = EmailMessage()
@@ -160,19 +149,17 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'     
-    msg['To'] = 'nextwaveaiandweb@gmail.com'        
+    msg['From'] = 'nextwaveaiandweb@gmail.com'
+    msg['To'] = 'nextwaveaiandweb@gmail.com'
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
     except Exception as e:
         print("Failed to send email:", e)
-
-# ------------------- הפעלה -------------------
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
