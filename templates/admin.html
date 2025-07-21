@@ -1,131 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Command Panel - HairBoss</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #eef2ff;
-      color: #333;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-    }
-    .day-section {
-      margin-bottom: 30px;
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      padding: 15px;
-      background: white;
-    }
-    .day-title {
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-    .slots {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .slot-btn {
-      padding: 6px 10px;
-      background: #3498db;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-    .slot-btn.unavailable {
-      background: #ccc;
-      color: #666;
-    }
-    .slot-btn:hover {
-      opacity: 0.9;
-    }
-    .day-toggle {
-      margin-top: 10px;
-      padding: 6px 12px;
-      background: #e74c3c;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .day-toggle.active {
-      background: #2ecc71;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Admin Command</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f9f9f9;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+        .day-block {
+            background: white;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 0 6px rgba(0,0,0,0.1);
+        }
+        .hour-button {
+            display: inline-block;
+            margin: 4px;
+            padding: 5px 10px;
+            font-size: 0.85em;
+            border: none;
+            border-radius: 6px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        .hour-button.disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+        form.inline {
+            display: inline;
+        }
+        .bot-section {
+            margin-top: 40px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 0 8px rgba(0,0,0,0.1);
+        }
+        textarea {
+            width: 100%;
+            height: 60px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .logout {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+        }
+    </style>
 </head>
 <body>
-  <h1>📅 Admin Availability Panel</h1>
+    <a class="logout" href="/logout">התנתק</a>
+    <h1>ברוך הבא, מנהל</h1>
 
-  <div id="days-container"></div>
+    {% for date, times in free_slots.items() %}
+        <div class="day-block">
+            <h2>{{ date }}</h2>
+            {% for time in ["09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30","15:00"] %}
+                <form class="inline" method="POST" action="/slot">
+                    <input type="hidden" name="date" value="{{ date }}">
+                    <input type="hidden" name="time" value="{{ time }}">
+                    <input type="hidden" name="action" value="{{ "remove" if time in times else "add" }}">
+                    <button class="hour-button {% if time not in times %}disabled{% endif %}">
+                        {{ time }}
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+    {% endfor %}
 
-  <script>
-    const times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"];
-
-    async function loadAdminAvailability() {
-      const res = await fetch('/availability');
-      const data = await res.json();
-      const container = document.getElementById('days-container');
-      container.innerHTML = '';
-
-      Object.entries(data).forEach(([date, slots]) => {
-        const section = document.createElement('div');
-        section.className = 'day-section';
-
-        const title = document.createElement('div');
-        title.className = 'day-title';
-        title.textContent = `📅 ${date}`;
-        section.appendChild(title);
-
-        const slotsDiv = document.createElement('div');
-        slotsDiv.className = 'slots';
-        times.forEach(time => {
-          const btn = document.createElement('button');
-          btn.className = 'slot-btn';
-          btn.textContent = time;
-          if (!slots.includes(time)) {
-            btn.classList.add('unavailable');
-          }
-          btn.onclick = async () => {
-            await fetch('/toggle-availability', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ date, time })
-            });
-            loadAdminAvailability();
-          };
-          slotsDiv.appendChild(btn);
-        });
-        section.appendChild(slotsDiv);
-
-        const dayBtn = document.createElement('button');
-        dayBtn.className = 'day-toggle';
-        dayBtn.textContent = slots.length > 0 ? '❌ בטל את כל היום' : '✅ הפוך יום לזמין';
-        if (slots.length > 0) dayBtn.classList.add('active');
-
-        dayBtn.onclick = async () => {
-          await fetch('/toggle-day', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date })
-          });
-          loadAdminAvailability();
-        };
-        section.appendChild(dayBtn);
-
-        container.appendChild(section);
-      });
-    }
-
-    loadAdminAvailability();
-  </script>
+    <div class="bot-section">
+        <h2>ניהול ידע של הבוט</h2>
+        <form method="POST" action="/bot-knowledge">
+            <textarea name="content" placeholder="כתוב מידע להוספה או מחיקה..."></textarea>
+            <button type="submit" name="action" value="add">הוסף</button>
+            <button type="submit" name="action" value="remove">מחק</button>
+        </form>
+    </div>
 </body>
 </html>
