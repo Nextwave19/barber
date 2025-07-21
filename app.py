@@ -1,12 +1,15 @@
 import requests
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 import os
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
+import json
 
 app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey")
 
+# שירותים ומחירים
 services_prices = {
     "Men's Haircut": 80,
     "Women's Haircut": 120,
@@ -14,6 +17,7 @@ services_prices = {
     "Color": 250
 }
 
+# יצירת זמינות התחלתית
 def init_free_slots():
     today = datetime.today()
     times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -25,18 +29,39 @@ def init_free_slots():
     return free_slots
 
 free_slots = init_free_slots()
-chat_history = []  # שמירת השיחה
+chat_history = []
 
+# קובץ config לניהול זמינות
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        return {"booking_enabled": True}
+    with open(CONFIG_FILE, "r") as f:
+        return json.load(f)
+
+def save_config(config):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f)
+
+# דף הבית
 @app.route("/")
 def index():
-    return render_template("index.html")
+    config = load_config()
+    return render_template("index.html", booking_enabled=config.get("booking_enabled", True))
 
+# API לזמינות
 @app.route("/availability")
 def availability():
     return jsonify(free_slots)
 
+# הזמנת תור
 @app.route("/book", methods=["POST"])
 def book():
+    config = load_config()
+    if not config.get("booking_enabled", True):
+        return jsonify({"error": "ההזמנות סגורות כרגע."}), 403
+
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -62,18 +87,17 @@ def book():
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
+# בוט AI
 @app.route("/ask", methods=["POST"])
 def ask():
     global chat_history
     data = request.get_json()
     user_message = data.get("message", "")
 
-    # מוסיף את ההודעה של המשתמש
     chat_history.append({"role": "user", "content": user_message})
     if len(chat_history) > 11:
-        chat_history = chat_history[-11:]  # שומר רק 11 אחרונות
+        chat_history = chat_history[-11:]
 
-    # הודעת פתיחה למערכת
     messages = [{"role": "system", "content": "You are a helpful bot for booking appointments at a hair salon."}] + chat_history
 
     GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
@@ -101,12 +125,13 @@ def ask():
         answer = output["choices"][0]["message"]["content"].strip()
         chat_history.append({"role": "assistant", "content": answer})
         if len(chat_history) > 11:
-            chat_history = chat_history[-11:]  # שוב שומר רק 11
+            chat_history = chat_history[-11:]
         return jsonify({"answer": answer})
     except Exception as e:
         print("Error calling GitHub AI API:", e)
         return jsonify({"error": str(e)}), 500
 
+# שליחת מייל
 def send_email(name, phone, date, time, service, price):
     msg = EmailMessage()
     msg.set_content(f"""
@@ -119,18 +144,50 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'     
-    msg['To'] = 'nextwaveaiandweb@gmail.com'        
+    msg['From'] = 'nextwaveaiandweb@gmail.com'
+    msg['To'] = 'nextwaveaiandweb@gmail.com'
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
     except Exception as e:
         print("Failed to send email:", e)
 
+# התחברות
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+        if username == "admin" and password == os.environ.get("ADMIN_PASSWORD", "1234"):
+            session['admin_logged_in'] = True
+            return redirect(url_for("admin"))
+    return render_template("login.html")
+
+# יציאה
+@app.route("/logout")
+def logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for("index"))
+
+# ניהול זמינות
+@app.route("/admin", methods=["GET", "POST"])
+def admin():
+    if not session.get("admin_logged_in"):
+        return redirect(url_for("login"))
+
+    config = load_config()
+    if request.method == "POST":
+        enabled = request.form.get("booking_enabled") == "on"
+        config["booking_enabled"] = enabled
+        save_config(config)
+
+    return render_template("admin.html", config=config)
+
+# הפעלת השרת
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
