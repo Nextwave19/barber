@@ -53,22 +53,15 @@ def login():
                 session["username"] = username
                 return redirect("/admin")
             else:
-                # לא להמשיך הלאה – אלא לעצור עם הודעת שגיאה
                 return render_template("login.html", error="סיסמה שגויה")
         
-        # אם זה משתמש רגיל – ודא שלא בטעות הכניס סיסמה כלשהי ואז תתעלם ממנה
+        # משתמש רגיל
         session["username"] = username
-        session["is_admin"] = False  # ודא שהוא לא אדמין
+        session["is_admin"] = False
         return redirect("/")
 
     return render_template("login.html")
 
-        
-        # אם זה לא האדמין – רק שמור אותו כמשתמש רגיל
-        session["username"] = username
-        return redirect("/")
-
-    return render_template("login.html")
 
 
 @app.route("/admin")
