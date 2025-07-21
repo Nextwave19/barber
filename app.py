@@ -37,7 +37,7 @@ custom_knowledge = []
 def index():
     return render_template("index.html")
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
     admin_user = os.environ.get('ADMIN_USERNAME')
@@ -53,13 +53,25 @@ def login():
                 session['is_admin'] = True
                 return redirect('/admin-command')
             else:
-                error = "סיסמה שגויה"
+                error = "\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4"
         else:
             session['username'] = username
             session['is_admin'] = False
             return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+@app.route("/admin-command")
+def admin_command():
+    if not session.get("is_admin"):
+        return redirect("/")
+    return render_template("admin_command.html")
+
 # --- API JSON ---
 
 @app.route("/availability")
@@ -196,12 +208,6 @@ Price: {price}₪
         print("Email sent successfully")
     except Exception as e:
         print("Failed to send email:", e)
-
-@app.route("/admin-command")
-def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/")
-    return render_template("admin_command.html")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
