@@ -5,6 +5,24 @@ import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
 
+import json
+
+STATE_FILE = "site_state.json"
+
+def get_site_state():
+    try:
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"active": True, "appointments_open": True, "bot_enabled": True}
+
+def set_site_state(updates):
+    state = get_site_state()
+    state.update(updates)
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
 app = Flask(__name__)
 
 services_prices = {
