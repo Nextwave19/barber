@@ -54,10 +54,13 @@
         }
     </style>
     <script>
+        let adminUser = "{{ admin_user|e }}";  // קלט מהשרת
+
         function togglePasswordField() {
-            const username = document.getElementById("username").value;
+            const usernameInput = document.getElementById("username").value.trim().toLowerCase();
             const passwordField = document.getElementById("passwordField");
-            if (username.trim().toLowerCase() === "admin") {
+
+            if (usernameInput === adminUser.toLowerCase()) {
                 passwordField.style.display = "block";
             } else {
                 passwordField.style.display = "none";
