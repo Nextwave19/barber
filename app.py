@@ -17,14 +17,17 @@ services_prices = {
 }
 
 # אתחול תאריכים זמינים
+all_times = [
+    "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"
+]
+
 def init_free_slots():
     today = datetime.today()
-    times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-             "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
     for i in range(7):
         date_str = (today + timedelta(days=i)).strftime("%d/%m")
-        free_slots[date_str] = times.copy()
+        free_slots[date_str] = all_times.copy()
     return free_slots
 
 free_slots = init_free_slots()
@@ -49,18 +52,34 @@ def login():
             return redirect("/admin")
         else:
             return render_template("login.html", error="שם משתמש או סיסמה לא נכונים")
-    
+
     return render_template("login.html")
 
 @app.route("/admin")
 def admin_panel():
     if not session.get("is_admin"):
         return redirect("/login")
-    return """
-    <h1>👑 ברוך הבא לפאנל אדמין של HairBoss</h1>
-    <p>כאן בעתיד תוכל לשלוט על זמינות, הצגת הזמנות ועוד.</p>
-    <a href='/logout'>התנתק</a>
-    """
+    return render_template("admin.html", free_slots=free_slots)
+
+@app.route("/admin/update_slot", methods=["POST"])
+def update_slot():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    date = request.form.get("date")
+    time = request.form.get("time")
+    action = request.form.get("action")
+
+    if date and time:
+        if action == "remove":
+            if time in free_slots.get(date, []):
+                free_slots[date].remove(time)
+        elif action == "add":
+            if date not in free_slots:
+                free_slots[date] = []
+            if time not in free_slots[date] and time in all_times:
+                free_slots[date].append(time)
+                free_slots[date].sort()
+    return redirect("/admin")
 
 @app.route("/logout")
 def logout():
@@ -167,8 +186,6 @@ Price: {price}₪
         print("Email sent successfully")
     except Exception as e:
         print("Failed to send email:", e)
-
-# --- הפעלת האפליקציה ---
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
