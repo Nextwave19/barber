@@ -41,27 +41,28 @@ def index():
 def login():
     if request.method == "POST":
         username = request.form.get("username")
-        password = request.form.get("password")  # יכול להיות None אם זה לא admin
+        password = request.form.get("password")
 
         admin_user = os.getenv("ADMIN_USERNAME")
         admin_pass = os.getenv("ADMIN_PASSWORD")
 
-        # אם זה האדמין – בדוק סיסמה
+        # אם זה האדמין – נדרשת סיסמה
         if username == admin_user:
-            if password == admin_pass:
-                session["is_admin"] = True
-                session["username"] = username
-                return redirect("/admin")
-            else:
+            if password != admin_pass:
                 return render_template("login.html", error="סיסמה שגויה")
-        
-        # משתמש רגיל
+            session["is_admin"] = True
+            session["username"] = username
+            return redirect("/admin")
+
+        # משתמש רגיל – לא אמור למלא סיסמה בכלל
+        if password:
+            return render_template("login.html", error="משתמש רגיל לא צריך סיסמה")
+
         session["username"] = username
         session["is_admin"] = False
         return redirect("/")
 
     return render_template("login.html")
-
 
 
 @app.route("/admin")
