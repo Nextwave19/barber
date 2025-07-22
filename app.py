@@ -37,26 +37,28 @@ custom_knowledge = []
 def index():
     return render_template("index.html")
 
-@app.route("/login", methods=['GET', 'POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD')
+    admin_user = os.getenv("ADMIN_USER", "admin")  # ברירת מחדל
 
     if request.method == 'POST':
         username = request.form['username']
         password = request.form.get('password', '')
 
-        if username == admin_user:
+        session['username'] = username
+        session['is_admin'] = False
+
+        if username.lower() == admin_user.lower():
+            admin_password = os.getenv("ADMIN_PASSWORD")
             if password == admin_password:
-                session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin_command')
+                return redirect('/admin-command')
             else:
-                error = "\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4"
+                error = "סיסמה שגויה"
+                session.pop('username', None)
+                session.pop('is_admin', None)
         else:
-            session['username'] = username
-            session['is_admin'] = False
             return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
