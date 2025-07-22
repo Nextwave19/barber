@@ -51,13 +51,16 @@ def login():
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin_command')
+                return redirect('/admin_command')  # <-- תוקן כאן
             else:
                 error = "סיסמה שגויה"
         else:
+            session['username'] = username
+            session['is_admin'] = False
             return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
+
 
 @app.route("/logout")
 def logout():
@@ -66,9 +69,9 @@ def logout():
 
 @app.route("/admin_command")
 def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/")
-    return render_template("admin_command.html")
+    if session.get("is_admin"):
+        return render_template("admin_command.html")
+    return redirect("/")
 
 # --- API JSON ---
 
