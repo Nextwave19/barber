@@ -54,8 +54,6 @@ def login():
                 return redirect('/admin_command')
             else:
                 error = "סיסמה שגויה"
-                session.pop('username', None)
-                session.pop('is_admin', None)
         else:
             return redirect('/')
 
