@@ -51,7 +51,7 @@ def login():
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin-command')
+                return redirect('/admin_command')
             else:
                 error = "\u05e1\u05d9\u05e1\u05de\u05d4 \u05e9\u05d2\u05d5\u05d9\u05d4"
         else:
@@ -66,7 +66,7 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route("/admin-command")
+@app.route("/admin_command")
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/")
