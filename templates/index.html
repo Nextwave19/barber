@@ -176,7 +176,7 @@
       👤 !שלום, {{ session.username }} |
       <a href="/logout" style="color: red; text-decoration: none;">🔓 התנתק</a>
       {% if session.is_admin %}
-        | <a href="/admin">🔧 ניהול</a>
+        | <a href="/admin-command" style="color: green; text-decoration: none;">🔧 ניהול</a>
       {% endif %}
     </div>
   {% else %}
