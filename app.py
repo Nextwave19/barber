@@ -44,10 +44,15 @@ def login():
     admin_password = os.environ.get('ADMIN_PASSWORD')
 
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form.get('password', '')
 
-        # בדיקה אם המשתמש הוא האדמין
+        # אם השדה ריק
+        if username == "":
+            error = "יש להזין שם משתמש"
+            return render_template('login.html', error=error, admin_user=admin_user)
+
+        # אם זה האדמין - חובה לבדוק סיסמה
         if username == admin_user:
             if password == admin_password:
                 session['username'] = username
@@ -56,11 +61,6 @@ def login():
             else:
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
-
-        # אם המשתמש לא אדמין, ממשיכים רק אם זה לא ריק
-        if username.strip() == "":
-            error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
 
         # משתמש רגיל
         session['username'] = username
