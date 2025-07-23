@@ -5,7 +5,7 @@
     <title>התחברות</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: sans-serif;
             background: #f9f9f9;
             display: flex;
             justify-content: center;
@@ -14,34 +14,10 @@
         }
         form {
             background: white;
-            padding: 24px;
-            border-radius: 12px;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            width: 320px;
-        }
-        h2 {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin: 10px 0 4px;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px;
-            width: 100%;
-            border-radius: 6px;
-            margin-top: 16px;
-            cursor: pointer;
         }
         .error {
             color: red;
@@ -49,42 +25,39 @@
             padding: 8px;
             border-radius: 6px;
             margin-bottom: 12px;
-            font-size: 0.9em;
             text-align: center;
         }
     </style>
     <script>
         function togglePasswordField() {
-            const usernameInput = document.getElementById("username").value.trim().toLowerCase();
-            const adminUser = document.querySelector("form").dataset.admin.toLowerCase();
-            const passwordField = document.getElementById("passwordField");
+            const username = document.getElementById('username').value.trim().toLowerCase();
+            const adminUser = "{{ admin_user|e }}".toLowerCase();
+            const passwordField = document.getElementById('passwordField');
 
-            if (usernameInput === adminUser) {
-                passwordField.style.display = "block";
+            if (username === adminUser) {
+                passwordField.style.display = 'block';
             } else {
-                passwordField.style.display = "none";
+                passwordField.style.display = 'none';
             }
         }
 
-        window.onload = function() {
-            togglePasswordField();
-        };
+        window.onload = togglePasswordField;
     </script>
 </head>
 <body>
-    <form method="POST" action="/login" data-admin="{{ admin_user|e }}">
+    <form method="POST">
         <h2>התחברות</h2>
 
         {% if error %}
             <div class="error">{{ error }}</div>
         {% endif %}
 
-        <label for="username">שם משתמש</label>
-        <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required autocomplete="off">
+        <label for="username">שם משתמש:</label>
+        <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required>
 
-        <div id="passwordField" style="display: none;">
-            <label for="password">סיסמה</label>
-            <input type="password" name="password" id="password" autocomplete="off">
+        <div id="passwordField" style="display:none;">
+            <label for="password">סיסמה:</label>
+            <input type="password" name="password" id="password">
         </div>
 
         <button type="submit">התחבר</button>
