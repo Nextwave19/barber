@@ -43,9 +43,6 @@ def login():
     admin_user = os.environ.get('ADMIN_USERNAME')
     admin_password = os.environ.get('ADMIN_PASSWORD')
 
-    app.logger.info(f"ADMIN_USERNAME from env: {admin_user}")
-    app.logger.info(f"ADMIN_PASSWORD from env: {admin_password}")
-
     if request.method == 'POST':
         username = request.form['username']
         password = request.form.get('password', '')
@@ -60,11 +57,12 @@ def login():
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
 
-        # משתמש רגיל
+        # אם המשתמש לא אדמין, ממשיכים רק אם זה לא ריק
         if username.strip() == "":
             error = "יש להזין שם משתמש"
             return render_template('login.html', error=error, admin_user=admin_user)
 
+        # משתמש רגיל
         session['username'] = username
         session['is_admin'] = False
         return redirect('/')
