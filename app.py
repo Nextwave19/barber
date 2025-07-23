@@ -74,9 +74,14 @@ def logout():
 
 @app.route("/admin_command")
 def admin_command():
-    if session.get("is_admin"):
-        return render_template("admin_command.html")
-    return redirect("/")
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return render_template(
+        "admin_command.html",
+        free_slots=free_slots,
+        services_prices=services_prices,
+        custom_knowledge=custom_knowledge
+    )
 
 # --- API JSON ---
 
