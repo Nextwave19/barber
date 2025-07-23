@@ -55,7 +55,6 @@ def login():
                 return redirect('/admin_command')
             else:
                 error = "סיסמה שגויה"
-                # לא נוצר session בכלל
                 return render_template('login.html', error=error, admin_user=admin_user)
 
         # משתמש רגיל
@@ -68,13 +67,6 @@ def login():
         return redirect('/')
 
     return render_template('login.html', error=error, admin_user=admin_user)
-        else:
-            session['username'] = username
-            session['is_admin'] = False
-            return redirect('/')
-
-    return render_template('login.html', error=error, admin_user=admin_user)
-
 
 @app.route("/logout")
 def logout():
