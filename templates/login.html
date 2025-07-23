@@ -90,11 +90,11 @@
     {% endif %}
 
     <form method="POST">
-        <input type="text" name="username" placeholder="שם משתמש" required>
+        <input type="text" name="username" placeholder="שם משתמש" id="username" value="{{ request.form.username or '' }}" required>
 
-        {% if admin_user %}
+        <div id="password-container" style="display: none;">
             <input type="password" name="password" placeholder="סיסמה">
-        {% endif %}
+        </div>
 
         <input type="submit" value="התחבר">
     </form>
@@ -103,6 +103,26 @@
         <a href="/">חזרה לעמוד הראשי</a>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const adminUser = "{{ admin_user }}";
+        const usernameInput = document.getElementById('username');
+        const passwordContainer = document.getElementById('password-container');
+
+        function checkUsername() {
+            const currentValue = usernameInput.value.trim();
+            if (currentValue === adminUser) {
+                passwordContainer.style.display = "block";
+            } else {
+                passwordContainer.style.display = "none";
+            }
+        }
+
+        usernameInput.addEventListener('input', checkUsername);
+        checkUsername(); // להפעלה מידית כשנטען עם ערך קודם
+    });
+</script>
 
 </body>
 </html>
