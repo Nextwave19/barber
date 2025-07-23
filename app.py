@@ -135,7 +135,7 @@ def update_slot():
         if time not in free_slots.get(date, []):
             free_slots[date].append(time)
             free_slots[date].sort()
-    return redirect("/admin")
+    return redirect("/admin_command")
 
 @app.route("/bot-knowledge", methods=["POST"])
 def update_bot_knowledge():
@@ -147,7 +147,7 @@ def update_bot_knowledge():
         custom_knowledge.append(content.strip())
     elif action == "remove" and content:
         custom_knowledge[:] = [item for item in custom_knowledge if item != content.strip()]
-    return redirect("/admin")
+    return redirect("/admin_command")
 
 @app.route("/ask", methods=["POST"])
 def ask():
