@@ -56,7 +56,7 @@
     <script>
         function togglePasswordField() {
             const usernameInput = document.getElementById("username").value.trim().toLowerCase();
-            const adminUser = "{{ admin_user|e }}".toLowerCase();
+            const adminUser = document.querySelector("form").dataset.admin.toLowerCase();
             const passwordField = document.getElementById("passwordField");
 
             if (usernameInput === adminUser) {
@@ -66,14 +66,13 @@
             }
         }
 
-        // טוען את שדה הסיסמה אם המשתמש כבר הקליד את שם האדמין
         window.onload = function() {
             togglePasswordField();
         };
     </script>
 </head>
 <body>
-    <form method="POST" action="/login">
+    <form method="POST" action="/login" data-admin="{{ admin_user|e }}">
         <h2>התחברות</h2>
 
         {% if error %}
@@ -81,11 +80,11 @@
         {% endif %}
 
         <label for="username">שם משתמש</label>
-        <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required>
+        <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required autocomplete="off">
 
         <div id="passwordField" style="display: none;">
             <label for="password">סיסמה</label>
-            <input type="password" name="password">
+            <input type="password" name="password" id="password" autocomplete="off">
         </div>
 
         <button type="submit">התחבר</button>
