@@ -51,9 +51,12 @@ def login():
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin_command')  # <-- תוקן כאן
+                return redirect('/admin_command')
             else:
                 error = "סיסמה שגויה"
+                session.pop('username', None)
+                session.pop('is_admin', None)
+                return render_template('login.html', error=error, admin_user=admin_user)  # ⬅️ כאן עצירה במקרה טעות
         else:
             session['username'] = username
             session['is_admin'] = False
