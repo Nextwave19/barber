@@ -36,7 +36,7 @@ custom_knowledge = []
 @app.route("/")
 def index():
     return render_template("index.html")
-
+    
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -47,6 +47,7 @@ def login():
         username = request.form['username']
         password = request.form.get('password', '')
 
+        # בדיקה אם המשתמש הוא האדמין
         if username == admin_user:
             if password == admin_password:
                 session['username'] = username
@@ -54,9 +55,19 @@ def login():
                 return redirect('/admin_command')
             else:
                 error = "סיסמה שגויה"
-                session.pop('username', None)
-                session.pop('is_admin', None)
-                return render_template('login.html', error=error, admin_user=admin_user)  # ⬅️ כאן עצירה במקרה טעות
+                # לא נוצר session בכלל
+                return render_template('login.html', error=error, admin_user=admin_user)
+
+        # משתמש רגיל
+        if username.strip() == "":
+            error = "יש להזין שם משתמש"
+            return render_template('login.html', error=error, admin_user=admin_user)
+
+        session['username'] = username
+        session['is_admin'] = False
+        return redirect('/')
+
+    return render_template('login.html', error=error, admin_user=admin_user)
         else:
             session['username'] = username
             session['is_admin'] = False
