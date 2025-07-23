@@ -54,18 +54,22 @@
         }
     </style>
     <script>
-        let adminUser = "{{ admin_user|e }}";
-
         function togglePasswordField() {
             const usernameInput = document.getElementById("username").value.trim().toLowerCase();
+            const adminUser = "{{ admin_user|e }}".toLowerCase();
             const passwordField = document.getElementById("passwordField");
 
-            if (usernameInput === adminUser.toLowerCase()) {
+            if (usernameInput === adminUser) {
                 passwordField.style.display = "block";
             } else {
                 passwordField.style.display = "none";
             }
         }
+
+        // טוען את שדה הסיסמה אם המשתמש כבר הקליד את שם האדמין
+        window.onload = function() {
+            togglePasswordField();
+        };
     </script>
 </head>
 <body>
@@ -77,7 +81,7 @@
         {% endif %}
 
         <label for="username">שם משתמש</label>
-        <input type="text" name="username" id="username" oninput="togglePasswordField()" required>
+        <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required>
 
         <div id="passwordField" style="display: none;">
             <label for="password">סיסמה</label>
