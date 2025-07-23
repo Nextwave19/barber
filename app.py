@@ -41,17 +41,16 @@ def index():
 def login():
     error = None
     admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password ="1234"
+    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
+
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form.get('password', '')
 
-        # אם השדה ריק
-        if username == "":
+        if not username:
             error = "יש להזין שם משתמש"
             return render_template('login.html', error=error, admin_user=admin_user)
 
-        # אם זה האדמין - חובה לבדוק סיסמה
         if username == admin_user:
             if password == admin_password:
                 session['username'] = username
@@ -61,7 +60,7 @@ def login():
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
 
-        # משתמש רגיל
+        # משתמש רגיל - אין צורך בסיסמה
         session['username'] = username
         session['is_admin'] = False
         return redirect('/')
