@@ -43,6 +43,9 @@ def login():
     admin_user = os.environ.get('ADMIN_USERNAME')
     admin_password = os.environ.get('ADMIN_PASSWORD')
 
+    print("ADMIN_USERNAME from env:", admin_user)
+    print("ADMIN_PASSWORD from env:", admin_password)
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form.get('password', '')
