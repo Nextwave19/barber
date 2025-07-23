@@ -78,6 +78,33 @@
         .back-link a:hover {
             text-decoration: underline;
         }
+
+        .password-container {
+            position: relative;
+            opacity: 0;
+            max-height: 0;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .password-container.show {
+            opacity: 1;
+            max-height: 100px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 14px;
+            color: #777;
+        }
+
+        .toggle-password:hover {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -90,10 +117,11 @@
     {% endif %}
 
     <form method="POST">
-        <input type="text" name="username" placeholder="שם משתמש" id="username" value="{{ request.form.username or '' }}" required>
+        <input type="text" name="username" id="username" placeholder="שם משתמש" value="{{ request.form.username or '' }}" required>
 
-        <div id="password-container" style="display: none;">
-            <input type="password" name="password" placeholder="סיסמה">
+        <div id="password-container" class="password-container">
+            <input type="password" name="password" id="password" placeholder="סיסמה">
+            <span class="toggle-password" onclick="togglePassword()">הצג</span>
         </div>
 
         <input type="submit" value="התחבר">
@@ -105,22 +133,35 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const adminUser = "{{ admin_user }}";
-        const usernameInput = document.getElementById('username');
+    const adminUser = "{{ admin_user }}";
+
+    function togglePasswordField() {
+        const username = document.getElementById('username').value.trim();
         const passwordContainer = document.getElementById('password-container');
 
-        function checkUsername() {
-            const currentValue = usernameInput.value.trim();
-            if (currentValue === adminUser) {
-                passwordContainer.style.display = "block";
-            } else {
-                passwordContainer.style.display = "none";
-            }
+        if (username === adminUser) {
+            passwordContainer.classList.add("show");
+        } else {
+            passwordContainer.classList.remove("show");
         }
+    }
 
-        usernameInput.addEventListener('input', checkUsername);
-        checkUsername(); // להפעלה מידית כשנטען עם ערך קודם
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggle = document.querySelector('.toggle-password');
+        if (passwordInput.type === "password") {
+            passwordInput.type = "text";
+            toggle.textContent = "הסתר";
+        } else {
+            passwordInput.type = "password";
+            toggle.textContent = "הצג";
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const usernameInput = document.getElementById('username');
+        usernameInput.addEventListener('input', togglePasswordField);
+        togglePasswordField(); // להריץ מידית אם הטופס נטען עם ערך
     });
 </script>
 
