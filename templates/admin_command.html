@@ -5,121 +5,178 @@
     <title>ניהול HairBoss</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #f9f9f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to bottom, #f5f5f5, #e0e0e0);
             padding: 20px;
-            text-align: right;
+            margin: 0;
         }
-        h1 {
-            color: #333;
+
+        h1, h2, h3 {
+            color: #2c3e50;
         }
+
         .section {
-            background: white;
-            padding: 20px;
+            background: #ffffff;
+            padding: 25px;
             border-radius: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
+
         .slots-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
+            margin-bottom: 10px;
         }
+
         form.inline {
             display: inline-block;
-            margin: 2px;
+            margin: 5px 0;
         }
+
         button {
-            padding: 5px 10px;
+            padding: 8px 14px;
             font-size: 0.9em;
             border-radius: 8px;
             border: none;
-            background: #4CAF50;
-            color: white;
             cursor: pointer;
+            transition: background 0.2s;
         }
+
         button.remove {
-            background: #f44336;
+            background: #e74c3c;
+            color: white;
         }
+
+        button.remove:hover {
+            background: #c0392b;
+        }
+
         button.add {
-            background: #2196F3;
+            background: #3498db;
+            color: white;
         }
-        input[type="text"], select {
-            padding: 6px;
-            margin: 5px 0;
-            border-radius: 8px;
-            border: 1px solid #ccc;
+
+        button.add:hover {
+            background: #2980b9;
         }
-        .logout {
-            float: left;
-            background: #ccc;
+
+        button.logout {
+            background: #bdc3c7;
             color: black;
+            float: left;
+        }
+
+        input[type="text"], select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        label {
+            margin-left: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        ul {
+            list-style: square;
+            padding-right: 20px;
+        }
+
+        ul li {
+            margin-bottom: 6px;
+            color: #333;
+        }
+
+        hr {
+            margin: 20px 0;
+            border: 0;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
         }
     </style>
 </head>
 <body>
+
+<div class="header-container">
     <h1>ברוך הבא, {{ session['username'] }} (מנהל)</h1>
     <form method="GET" action="/logout">
         <button class="logout">התנתק</button>
     </form>
+</div>
 
-    <div class="section">
-        <h2>ניהול תורים לפי יום</h2>
-        {% for date, times in free_slots.items() %}
-            <div style="margin-bottom: 10px;">
-                <strong>{{ date }}</strong>
-                <form method="POST" action="/slot" class="inline">
-                    <input type="hidden" name="date" value="{{ date }}">
-                    <input type="hidden" name="time" value="*">
-                    <input type="hidden" name="action" value="remove">
-                    <button class="remove">ביטול כל התורים ביום זה</button>
-                </form>
-            </div>
-            <div class="slots-container">
-                {% for time in times %}
-                    <form method="POST" action="/slot" class="inline">
-                        <input type="hidden" name="date" value="{{ date }}">
-                        <input type="hidden" name="time" value="{{ time }}">
-                        <input type="hidden" name="action" value="remove">
-                        <button class="remove">{{ time }} ✖</button>
-                    </form>
-                {% endfor %}
-            </div>
+<div class="section">
+    <h2>ניהול תורים לפי יום</h2>
+
+    {% for date, times in free_slots.items() %}
+        <div style="margin-bottom: 8px;">
+            <strong>{{ date }}</strong>
             <form method="POST" action="/slot" class="inline">
                 <input type="hidden" name="date" value="{{ date }}">
-                <label>הוסף שעה:</label>
-                <input type="text" name="time" placeholder="למשל 16:30" required>
-                <input type="hidden" name="action" value="add">
-                <button class="add">הוסף</button>
+                <input type="hidden" name="time" value="*">
+                <input type="hidden" name="action" value="remove">
+                <button class="remove">ביטול כל התורים ליום זה</button>
             </form>
-            <hr>
-        {% endfor %}
-    </div>
+        </div>
 
-    <div class="section">
-        <h2>עדכון ידע של הבוט</h2>
-        <form method="POST" action="/bot-knowledge">
-            <label>הוסף מידע חדש:</label>
-            <input type="text" name="content" placeholder="למשל: שעות פעילות מיוחדות" required>
-            <input type="hidden" name="action" value="add">
-            <button class="add">הוסף</button>
-        </form>
-
-        <form method="POST" action="/bot-knowledge">
-            <label>הסר מידע:</label>
-            <input type="text" name="content" placeholder="העתק טקסט להסרה" required>
-            <input type="hidden" name="action" value="remove">
-            <button class="remove">הסר</button>
-        </form>
-
-        <h3>מידע קיים:</h3>
-        <ul>
-            {% for item in custom_knowledge %}
-                <li>{{ item }}</li>
-            {% else %}
-                <li>אין מידע נוסף.</li>
+        <div class="slots-container">
+            {% for time in times %}
+                <form method="POST" action="/slot" class="inline">
+                    <input type="hidden" name="date" value="{{ date }}">
+                    <input type="hidden" name="time" value="{{ time }}">
+                    <input type="hidden" name="action" value="remove">
+                    <button class="remove">{{ time }} ✖</button>
+                </form>
             {% endfor %}
-        </ul>
-    </div>
+        </div>
+
+        <form method="POST" action="/slot" class="inline">
+            <input type="hidden" name="date" value="{{ date }}">
+            <label>הוסף שעה:</label>
+            <input type="text" name="time" placeholder="למשל 16:30" required>
+            <input type="hidden" name="action" value="add">
+            <button class="add">הוסף שעה</button>
+        </form>
+        <hr>
+    {% endfor %}
+</div>
+
+<div class="section">
+    <h2>עדכון הידע של הבוט</h2>
+
+    <form method="POST" action="/bot-knowledge">
+        <label>הוסף מידע חדש:</label>
+        <input type="text" name="content" placeholder="למשל: שעות פעילות מיוחדות" required>
+        <input type="hidden" name="action" value="add">
+        <button class="add">הוסף מידע</button>
+    </form>
+
+    <form method="POST" action="/bot-knowledge">
+        <label>הסר מידע קיים:</label>
+        <input type="text" name="content" placeholder="העתק מידע להסרה" required>
+        <input type="hidden" name="action" value="remove">
+        <button class="remove">הסר מידע</button>
+    </form>
+
+    <h3>מידע קיים:</h3>
+    <ul>
+        {% for item in custom_knowledge %}
+            <li>{{ item }}</li>
+        {% else %}
+            <li>אין מידע כרגע.</li>
+        {% endfor %}
+    </ul>
+</div>
+
 </body>
 </html>
