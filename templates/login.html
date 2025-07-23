@@ -5,7 +5,7 @@
     <title>התחברות</title>
     <style>
         body {
-            font-family: sans-serif;
+            font-family: Arial, sans-serif;
             background: #f9f9f9;
             display: flex;
             justify-content: center;
@@ -14,10 +14,34 @@
         }
         form {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 300px;
+            padding: 24px;
+            border-radius: 12px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 320px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 10px 0 4px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            margin-top: 16px;
+            cursor: pointer;
         }
         .error {
             color: red;
@@ -25,6 +49,7 @@
             padding: 8px;
             border-radius: 6px;
             margin-bottom: 12px;
+            font-size: 0.9em;
             text-align: center;
         }
     </style>
@@ -52,11 +77,11 @@
             <div class="error">{{ error }}</div>
         {% endif %}
 
-        <label for="username">שם משתמש:</label>
+        <label for="username">שם משתמש</label>
         <input type="text" name="username" id="username" value="{{ request.form.username or '' }}" oninput="togglePasswordField()" required>
 
-        <div id="passwordField" style="display:none;">
-            <label for="password">סיסמה:</label>
+        <div id="passwordField" style="display: none;">
+            <label for="password">סיסמה</label>
             <input type="password" name="password" id="password">
         </div>
 
