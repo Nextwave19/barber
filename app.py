@@ -149,6 +149,53 @@ def update_bot_knowledge():
         custom_knowledge[:] = [item for item in custom_knowledge if item != content.strip()]
     return redirect("/admin_command")
 
+@app.route("/admin/update_slot", methods=["POST"])
+def admin_update_slot():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.get_json()
+    date = data.get("date")
+    time = data.get("time")
+    action = data.get("action")
+    new_time = data.get("new_time")
+
+    if date not in free_slots:
+        return jsonify({"error": "Invalid date"}), 400
+
+    if action == "disable":
+        if time in free_slots[date]:
+            free_slots[date].remove(time)
+        return jsonify({"status": "disabled"})
+
+    elif action == "enable":
+        if time not in free_slots[date]:
+            free_slots[date].append(time)
+            free_slots[date].sort()
+        return jsonify({"status": "enabled"})
+
+    elif action == "delete":
+        if time in free_slots[date]:
+            free_slots[date].remove(time)
+        return jsonify({"status": "deleted"})
+
+    elif action == "add":
+        if time not in free_slots[date]:
+            free_slots[date].append(time)
+            free_slots[date].sort()
+        return jsonify({"status": "added"})
+
+    elif action == "edit":
+        if time in free_slots[date] and new_time:
+            free_slots[date].remove(time)
+            if new_time not in free_slots[date]:
+                free_slots[date].append(new_time)
+                free_slots[date].sort()
+            return jsonify({"status": "edited", "new_time": new_time})
+
+    return jsonify({"error": "Invalid action"}), 400
+
+
 @app.route("/ask", methods=["POST"])
 def ask():
     global chat_history
