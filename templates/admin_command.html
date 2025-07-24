@@ -5,13 +5,31 @@
     <title>ניהול HairBoss</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        .hour-block {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+            width: fit-content;
+            margin: 0.25rem auto;
+        }
         .hour-block:hover {
             background-color: #c6f6d5 !important;
+            transform: scale(1.02);
         }
-        .hour-block.disabled {
-            background-color: #e5e7eb !important;
+        .disabled-hour {
+            background-color: #d1d5db !important;
             color: #6b7280;
-            text-decoration: line-through;
+        }
+        .hour-list {
+            transition: max-height 0.5s ease-in-out;
+        }
+        .active-hour {
+            background-color: #bbf7d0 !important;
+            color: #166534;
+        }
+        .hour-block .actions button {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
         }
     </style>
 </head>
@@ -34,25 +52,24 @@
             <div class="mb-4">
                 <div class="flex justify-between items-center bg-gray-100 p-2 rounded cursor-pointer hover:bg-gray-200" onclick="toggleDay('{{ day }}')">
                     <span class="text-lg font-medium">{{ day }}</span>
-                    <form method="POST" action="/slot" onsubmit="return confirm('בטוח שברצונך לבטל את כל התורים ביום זה?');">
+                    <form method="POST" action="/slot">
                         <input type="hidden" name="date" value="{{ day }}">
                         <input type="hidden" name="time" value="*">
-                        <input type="hidden" name="action" value="remove">
+                        <input type="hidden" name="action" value="disable_day">
                         <button class="bg-red-500 text-white px-2 py-1 text-sm rounded hover:bg-red-600">השבת את כל היום</button>
                     </form>
                 </div>
                 <div id="hours-{{ day }}" class="hour-list hidden p-2 border rounded bg-white shadow-inner mt-2">
                     {% for time in free_slots[day] %}
-                        <div class="hour-block {{ 'disabled' if time.endswith(' (כבוי)') }} bg-green-200 cursor-pointer text-center rounded p-1 my-1 relative" onclick="toggleActions(this)">
-                            {{ time.replace(' (כבוי)', '') }}
+                        <div class="hour-block {{ 'disabled-hour' if free_slots[day][time] == 'disabled' else 'active-hour' }} cursor-pointer text-center rounded" onclick="toggleActions(this)">
+                            {{ time }}
                             <div class="actions hidden mt-1 flex gap-2 justify-center">
-                                <button onclick="modifySlot('{{ day }}', '{{ time.replace(' (כבוי)', '') }}', 'delete'); event.stopPropagation();" class="bg-red-500 text-white text-sm px-2 py-1 rounded hover:bg-red-600">🗑️ מחק</button>
-                                {% if not time.endswith(' (כבוי)') %}
-                                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'disable'); event.stopPropagation();" class="bg-gray-500 text-white text-sm px-2 py-1 rounded hover:bg-gray-600">🚫 כבה</button>
+                                <button onclick="modifySlot('{{ day }}', '{{ time }}', 'delete'); event.stopPropagation();" class="bg-red-500 text-white text-xs rounded hover:bg-red-600">🗑️</button>
+                                {% if free_slots[day][time] == 'disabled' %}
+                                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'enable'); event.stopPropagation();" class="bg-green-500 text-white text-xs rounded hover:bg-green-600">✅</button>
                                 {% else %}
-                                    <button onclick="modifySlot('{{ day }}', '{{ time.replace(' (כבוי)', '') }}', 'enable'); event.stopPropagation();" class="bg-green-500 text-white text-sm px-2 py-1 rounded hover:bg-green-600">✅ הפעל</button>
+                                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'disable'); event.stopPropagation();" class="bg-gray-500 text-white text-xs rounded hover:bg-gray-600">🚫</button>
                                 {% endif %}
-                                <button onclick="editHourPrompt('{{ day }}', '{{ time.replace(' (כבוי)', '') }}'); event.stopPropagation();" class="bg-yellow-400 text-white text-sm px-2 py-1 rounded hover:bg-yellow-500">✏️ ערוך</button>
                             </div>
                         </div>
                     {% endfor %}
@@ -61,7 +78,7 @@
                         <input type="hidden" name="date" value="{{ day }}">
                         <input type="text" name="time" placeholder="הוסף שעה (למשל 14:00)" class="border px-2 py-1 rounded w-40" required>
                         <input type="hidden" name="action" value="add">
-                        <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">➕ הוסף</button>
+                        <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">➕</button>
                     </form>
                 </div>
             </div>
@@ -102,33 +119,27 @@
 
         function toggleActions(hourEl) {
             const actions = hourEl.querySelector('.actions');
-            if (actions) actions.classList.toggle('hidden');
+            if (actions) {
+                actions.classList.toggle('hidden');
+            }
         }
 
         function modifySlot(date, time, action) {
             fetch("/admin/update_slot", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 body: JSON.stringify({ date, time, action })
             })
             .then(res => res.json())
             .then(data => {
-                if (data.status || data.message) location.reload();
-                else alert("שגיאה: " + (data.error || "לא ידועה"));
+                if (data.status || data.message) {
+                    location.reload();
+                } else {
+                    alert("שגיאה: " + (data.error || "לא ידועה"));
+                }
             });
-        }
-
-        function editHourPrompt(date, oldTime) {
-            const newTime = prompt("שנה את השעה מ-" + oldTime + " ל:");
-            if (newTime) {
-                fetch("/admin/update_slot", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ date, time: oldTime, action: "edit", new_time: newTime })
-                })
-                .then(res => res.json())
-                .then(data => location.reload());
-            }
         }
     </script>
 </body>
