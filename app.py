@@ -69,16 +69,28 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route("/admin_command")
+@app.route('/admin_command')
 def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/login")
+    # טעינת הנתונים הרלוונטיים
+    with open('available_slots.json', 'r') as f:
+        free_slots = json.load(f)
+
+    with open('services_prices.json', 'r') as f:
+        services_prices = json.load(f)
+
+    with open('custom_knowledge.json', 'r') as f:
+        custom_knowledge = json.load(f)
+
+    weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+
     return render_template(
         "admin_command.html",
         free_slots=free_slots,
         services_prices=services_prices,
-        custom_knowledge=custom_knowledge
+        custom_knowledge=custom_knowledge,
+        weekdays=weekdays  # ← הוספת המשתנה החסר
     )
+
 
 @app.route("/availability")
 def availability():
