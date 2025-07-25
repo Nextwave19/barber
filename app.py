@@ -72,29 +72,48 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route("/admin_command")
+@app.route('/admin_command', methods=['GET', 'POST'])
 def admin_command():
-    if not session.get("is_admin"):
-        return redirect("/login")
+    if request.method == 'POST':
+        action = request.form.get('action')
+        date = request.form.get('date')
+        time = request.form.get('time')
 
-    # הכנת מבנה שמפריד בין שעות רגילות לשעות כבויות
-    structured_slots = {}
-    for date, slots in free_slots.items():
-        structured_slots[date] = {
-            "enabled": [s for s in slots if " (כבוי)" not in s],
-            "disabled": [s for s in slots if " (כבוי)" in s]
-        }
+        if action == 'toggle':
+            # כיבוי/הפעלה של שעה
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
+            else:
+                disabled_slots.setdefault(date, []).append(time)
 
-    # זה מה שהיה חסר וגרם לשגיאה
-    disabled_slots = {date: structured_slots[date]["disabled"] for date in structured_slots}
+        elif action == 'remove':
+            # מחיקה
+            if date in free_slots and time in free_slots[date]:
+                free_slots[date].remove(time)
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
 
-    return render_template(
-        "admin_command.html",
-        free_slots=structured_slots,
-        services_prices=services_prices,
-        custom_knowledge=custom_knowledge,
-        disabled_slots=disabled_slots
-    )
+        elif action == 'add':
+            # הוספת שעה
+            if time and time not in free_slots.get(date, []):
+                free_slots.setdefault(date, []).append(time)
+
+        elif action == 'disable_day':
+            # כיבוי יום שלם
+            disabled_slots[date] = free_slots.get(date, []).copy()
+
+        elif action == 'enable_day':
+            # הפעלת כל היום
+            disabled_slots[date] = []
+
+        return redirect('/admin_command')
+
+    # אם זו בקשת GET – הצג את הדף
+    return render_template('admin_command.html',
+                           free_slots=free_slots,
+                           disabled_slots=disabled_slots,
+                           custom_knowledge=custom_knowledge,
+                           get_day_name=get_day_name)
 
 # --- API JSON ---
 
