@@ -150,7 +150,7 @@ def update_bot_knowledge():
     return redirect("/admin_command")
 
 @app.route('/admin/update_slot', methods=['POST'])
-def update_slot():
+def update_slot_admin():
     try:
         data = request.get_json()
         date = data.get('date')
