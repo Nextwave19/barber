@@ -31,10 +31,12 @@ free_slots = init_free_slots()
 chat_history = []
 custom_knowledge = []
 
+# --- דפי HTML ---
+
 @app.route("/")
 def index():
     return render_template("index.html")
-
+    
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -58,6 +60,7 @@ def login():
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
 
+        # משתמש רגיל - אין צורך בסיסמה
         session['username'] = username
         session['is_admin'] = False
         return redirect('/')
@@ -69,28 +72,18 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route('/admin_command')
+@app.route("/admin_command")
 def admin_command():
-    # טעינת הנתונים הרלוונטיים
-    with open('available_slots.json', 'r') as f:
-        free_slots = json.load(f)
-
-    with open('services_prices.json', 'r') as f:
-        services_prices = json.load(f)
-
-    with open('custom_knowledge.json', 'r') as f:
-        custom_knowledge = json.load(f)
-
-    weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
-
+    if not session.get("is_admin"):
+        return redirect("/login")
     return render_template(
         "admin_command.html",
         free_slots=free_slots,
         services_prices=services_prices,
-        custom_knowledge=custom_knowledge,
-        weekdays=weekdays  # ← הוספת המשתנה החסר
+        custom_knowledge=custom_knowledge
     )
 
+# --- API JSON ---
 
 @app.route("/availability")
 def availability():
@@ -125,7 +118,7 @@ def book():
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
 @app.route("/slot", methods=["POST"])
-def update_slot_form():
+def update_slot():
     if not session.get("is_admin"):
         return redirect("/login")
     date = request.form.get("date")
@@ -189,6 +182,7 @@ def update_slot():
         else:
             return jsonify({"error": "Invalid action"}), 400
 
+        save_slots()  # אם יש לך פונקציה כזו
         return jsonify({"status": "success"})
 
     except Exception as e:
