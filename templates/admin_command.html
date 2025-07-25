@@ -1,143 +1,172 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <title>לוח ניהול HairBoss</title>
+  <meta charset="UTF-8" />
+  <title>ניהול תורים</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
-    .hour-block:hover {
-      background-color: #c6f6d5 !important;
+    .hour-slot:hover .slot-actions {
+      display: flex;
     }
-    .transition-all {
-      transition: all 0.3s ease-in-out;
+    .slot-actions {
+      display: none;
+    }
+    .slot-modal {
+      background-color: rgba(0,0,0,0.5);
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
     }
   </style>
 </head>
-<body class="bg-gray-100 p-6 text-right font-sans">
+<body class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-5xl mx-auto">
 
-  <div class="flex justify-between items-center mb-6">
-    <h1 class="text-3xl font-bold text-gray-800">לוח ניהול HairBoss</h1>
-    <div class="flex gap-2">
-      <form method="GET" action="/logout">
-        <button class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">התנתק</button>
-      </form>
-      <form method="GET" action="/">
-        <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">חזרה להזמנות</button>
-      </form>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold text-gray-800">📅 לוח ניהול תורים</h1>
+      <a href="/" class="text-blue-600 hover:underline">🔙 חזור להזמנות</a>
     </div>
-  </div>
 
-  <div class="bg-white p-6 rounded shadow">
-    <h2 class="text-xl font-semibold mb-4">ניהול תורים</h2>
-
-    {% for day in free_slots.keys() %}
-      <div class="mb-4 border rounded overflow-hidden shadow">
-        <!-- כותרת יום -->
-        <div class="flex justify-between items-center bg-gray-100 px-4 py-2 cursor-pointer hover:bg-gray-200" onclick="toggleDay('{{ day }}')">
-          <span class="text-lg font-medium">{{ day }}</span>
-          <form method="POST" action="/slot">
-            <input type="hidden" name="date" value="{{ day }}">
-            <input type="hidden" name="time" value="*">
-            <input type="hidden" name="action" value="remove">
-            <button class="bg-red-500 text-white px-2 py-1 text-sm rounded hover:bg-red-600">השבת את כל היום</button>
-          </form>
-        </div>
-
-        <!-- שעות -->
-        <div id="hours-{{ day }}" class="hour-list hidden transition-all bg-white px-4 py-2">
-          <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-            {% for time in free_slots[day] %}
-              <div class="relative">
-                <div class="hour-block bg-green-200 text-center py-1 rounded cursor-pointer text-sm transition-all" onclick="toggleActions(this)">
-                  {{ time }}
-                  <div class="actions hidden mt-1 flex gap-1 justify-center text-xs">
-                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'delete'); event.stopPropagation();" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">מחק</button>
-                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'disable'); event.stopPropagation();" class="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600">כבה</button>
-                    <button onclick="modifySlot('{{ day }}', '{{ time }}', 'enable'); event.stopPropagation();" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">הפעל</button>
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-
-            {% if disabled_slots and disabled_slots.get(day) %}
-              {% for time in disabled_slots[day] %}
-                <div class="relative">
-                  <div class="hour-block bg-gray-300 text-center py-1 rounded cursor-pointer text-sm transition-all line-through" onclick="toggleActions(this)">
-                    {{ time }}
-                    <div class="actions hidden mt-1 flex gap-1 justify-center text-xs">
-                      <button onclick="modifySlot('{{ day }}', '{{ time }}', 'delete'); event.stopPropagation();" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">מחק</button>
-                      <button onclick="modifySlot('{{ day }}', '{{ time }}', 'enable'); event.stopPropagation();" class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600">הפעל</button>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            {% endif %}
+    {% for day, times in free_slots.items() %}
+    <div class="mb-4 bg-white shadow rounded-lg">
+      <div class="flex justify-between items-center border-b bg-gray-100 px-4 py-3">
+        <button onclick="toggleDay('{{ day }}')" class="text-right font-semibold text-lg">
+          {{ day }}
+        </button>
+        <button onclick="disableWholeDay('{{ day }}')" class="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded">כבה את כל היום</button>
+      </div>
+      <div id="day-{{ day|replace(' ', '_') }}" class="hidden p-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {% for time in times %}
+          {% set is_disabled = '(כבוי)' in time %}
+          {% set clean_time = time.replace(' (כבוי)', '') %}
+          <div class="relative group hour-slot">
+            <div class="w-full text-center rounded-xl px-2 py-2 font-semibold text-sm shadow transition duration-300
+              {% if is_disabled %} bg-gray-300 text-gray-600 {% else %} bg-green-100 text-green-800 {% endif %}">
+              {{ clean_time }}
+            </div>
+            <div class="slot-actions absolute top-0 right-0 mt-1 mr-1 flex flex-col gap-1 z-20">
+              {% if not is_disabled %}
+              <button onclick="event.stopPropagation(); modifySlot('{{ day }}', '{{ clean_time }}', 'disable');"
+                class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 text-xs px-2 py-1 rounded shadow">🔌 כבה</button>
+              {% else %}
+              <button onclick="event.stopPropagation(); modifySlot('{{ day }}', '{{ clean_time }}', 'enable');"
+                class="bg-green-200 hover:bg-green-300 text-green-800 text-xs px-2 py-1 rounded shadow">✅ הפעל</button>
+              {% endif %}
+              <button onclick="event.stopPropagation(); modifySlot('{{ day }}', '{{ clean_time }}', 'delete');"
+                class="bg-red-200 hover:bg-red-300 text-red-800 text-xs px-2 py-1 rounded shadow">❌ מחק</button>
+              <button onclick="event.stopPropagation(); openEditModal('{{ day }}', '{{ clean_time }}');"
+                class="bg-blue-200 hover:bg-blue-300 text-blue-800 text-xs px-2 py-1 rounded shadow">📝 ערוך</button>
+            </div>
           </div>
-
-          <!-- טופס הוספת שעה -->
-          <form method="POST" action="/slot" class="mt-4 flex flex-wrap gap-2 items-center">
-            <input type="hidden" name="date" value="{{ day }}">
-            <input type="text" name="time" placeholder="הוסף שעה (כמו 14:00)" class="border px-2 py-1 rounded w-40" required>
-            <input type="hidden" name="action" value="add">
-            <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 text-sm">➕ הוסף</button>
-          </form>
+          {% endfor %}
+        </div>
+        <div class="mt-4 text-left">
+          <button onclick="openAddModal('{{ day }}')" class="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded shadow">
+            ➕ הוסף שעה
+          </button>
         </div>
       </div>
+    </div>
     {% endfor %}
   </div>
 
-  <!-- עדכון בוט -->
-  <div class="bg-white p-6 mt-8 rounded shadow">
-    <h2 class="text-xl font-semibold mb-4">עדכון ידע של הבוט</h2>
+  <!-- Add Modal -->
+  <div id="addModal" class="hidden slot-modal">
+    <div class="bg-white p-6 rounded-lg shadow-xl">
+      <h2 class="text-xl font-bold mb-4">הוסף שעה</h2>
+      <input id="addTimeInput" type="text" placeholder="לדוג׳: 14:30" class="border rounded w-full p-2 mb-4">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeAddModal()" class="px-4 py-2 bg-gray-300 rounded">בטל</button>
+        <button onclick="confirmAddTime()" class="px-4 py-2 bg-blue-500 text-white rounded">הוסף</button>
+      </div>
+    </div>
+  </div>
 
-    <form method="POST" action="/bot-knowledge" class="mb-4 flex gap-2 items-center">
-      <label class="font-medium">📝 הוסף:</label>
-      <input type="text" name="content" class="border px-3 py-1 rounded w-1/2" required>
-      <input type="hidden" name="action" value="add">
-      <button class="bg-green-500 text-white px-4 py-1 rounded hover:bg-green-600">הוסף</button>
-    </form>
-
-    <form method="POST" action="/bot-knowledge" class="mb-4 flex gap-2 items-center">
-      <label class="font-medium">🗑️ הסר:</label>
-      <input type="text" name="content" class="border px-3 py-1 rounded w-1/2" required>
-      <input type="hidden" name="action" value="remove">
-      <button class="bg-red-500 text-white px-4 py-1 rounded hover:bg-red-600">הסר</button>
-    </form>
-
-    <div>
-      <h3 class="font-medium text-gray-700 mt-4">📋 מידע קיים:</h3>
-      <ul class="list-disc pr-5 mt-2">
-        {% for item in custom_knowledge %}
-          <li>{{ item }}</li>
-        {% else %}
-          <li>אין מידע נוסף.</li>
-        {% endfor %}
-      </ul>
+  <!-- Edit Modal -->
+  <div id="editModal" class="hidden slot-modal">
+    <div class="bg-white p-6 rounded-lg shadow-xl">
+      <h2 class="text-xl font-bold mb-4">ערוך שעה</h2>
+      <input id="editTimeInput" type="text" class="border rounded w-full p-2 mb-4">
+      <div class="flex justify-end gap-2">
+        <button onclick="closeEditModal()" class="px-4 py-2 bg-gray-300 rounded">בטל</button>
+        <button onclick="confirmEditTime()" class="px-4 py-2 bg-blue-500 text-white rounded">שמור</button>
+      </div>
     </div>
   </div>
 
   <script>
+    let currentEditDay = "";
+    let currentEditTime = "";
+
     function toggleDay(day) {
-      const el = document.getElementById("hours-" + day);
-      if (el) el.classList.toggle("hidden");
+      const el = document.getElementById("day-" + day.replace(/\s/g, "_"));
+      el.classList.toggle("hidden");
     }
 
-    function toggleActions(hourEl) {
-      const actions = hourEl.querySelector('.actions');
-      if (actions) actions.classList.toggle('hidden');
+    function disableWholeDay(day) {
+      fetch("/admin/update_slot", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: day, action: "disable_all" })
+      }).then(res => res.json()).then(() => location.reload());
     }
 
     function modifySlot(date, time, action) {
       fetch("/admin/update_slot", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, time, action })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: date, time: time, action: action })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === "success") location.reload();
+        else alert("שגיאה: " + (data.error || "פעולה נכשלה"));
+      })
+      .catch(() => alert("שגיאת רשת."));
+    }
+
+    function openAddModal(day) {
+      currentEditDay = day;
+      document.getElementById("addTimeInput").value = "";
+      document.getElementById("addModal").classList.remove("hidden");
+    }
+    function closeAddModal() {
+      document.getElementById("addModal").classList.add("hidden");
+    }
+    function confirmAddTime() {
+      const newTime = document.getElementById("addTimeInput").value;
+      modifySlot(currentEditDay, newTime, 'add');
+      closeAddModal();
+    }
+
+    function openEditModal(day, time) {
+      currentEditDay = day;
+      currentEditTime = time;
+      document.getElementById("editTimeInput").value = time;
+      document.getElementById("editModal").classList.remove("hidden");
+    }
+    function closeEditModal() {
+      document.getElementById("editModal").classList.add("hidden");
+    }
+    function confirmEditTime() {
+      const newTime = document.getElementById("editTimeInput").value;
+      fetch("/admin/update_slot", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: currentEditDay, time: currentEditTime, new_time: newTime, action: "edit" })
       })
       .then(res => res.json())
-      .then(data => location.reload())
-      .catch(err => alert("שגיאה: " + err));
+      .then(data => {
+        if (data.status === "success") location.reload();
+        else alert("שגיאה בעריכה");
+      });
+      closeEditModal();
     }
   </script>
-
 </body>
 </html>
