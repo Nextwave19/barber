@@ -4,6 +4,8 @@ import os
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, timedelta
+from collections import defaultdict
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or "default_secret_key"
@@ -28,6 +30,7 @@ def init_free_slots():
     return free_slots
 
 free_slots = init_free_slots()
+disabled_slots = defaultdict(list)
 chat_history = []
 custom_knowledge = []
 
