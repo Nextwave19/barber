@@ -149,35 +149,44 @@ def update_bot_knowledge():
         custom_knowledge[:] = [item for item in custom_knowledge if item != content.strip()]
     return redirect("/admin_command")
 
-@app.route("/admin/update_slot", methods=["POST"])
-def admin_update_slot():
-    data = request.get_json()
-    date = data.get("date")
-    time = data.get("time")
-    action = data.get("action")
+@app.route('/admin/update_slot', methods=['POST'])
+def update_slot():
+    try:
+        data = request.get_json()
+        date = data.get('date')
+        time = data.get('time')
+        action = data.get('action')
 
-    if date not in free_slots:
-        free_slots[date] = []
+        if not date or not time or not action:
+            return jsonify({"error": "Missing required fields"}), 400
 
-    if action == "delete":
-        if time in free_slots[date]:
-            free_slots[date].remove(time)
-    elif action == "disable":
-        if time in free_slots[date] and not time.endswith(" [כבוי]"):
-            index = free_slots[date].index(time)
-            free_slots[date][index] = f"{time} [כבוי]"
-    elif action == "enable":
-        for i, t in enumerate(free_slots[date]):
-            if t == time or t == f"{time} [כבוי]":
-                free_slots[date][i] = time
-                break
-    elif action == "add":
-        if time not in free_slots[date] and f"{time} [כבוי]" not in free_slots[date]:
-            free_slots[date].append(time)
+        if action == 'delete':
+            if date in free_slots and time in free_slots[date]:
+                free_slots[date].remove(time)
+                if not free_slots[date]:
+                    del free_slots[date]
+        elif action == 'disable':
+            if date in free_slots and time in free_slots[date]:
+                if ' (כבוי)' not in time:
+                    index = free_slots[date].index(time)
+                    free_slots[date][index] = f"{time} (כבוי)"
+        elif action == 'enable':
+            if date in free_slots:
+                updated_times = []
+                for t in free_slots[date]:
+                    if t.replace(" (כבוי)", "") == time:
+                        updated_times.append(time)
+                    else:
+                        updated_times.append(t)
+                free_slots[date] = updated_times
+        else:
+            return jsonify({"error": "Invalid action"}), 400
 
-    save_slots()
-    return jsonify(status="success")
+        save_slots()  # אם יש לך פונקציה כזו
+        return jsonify({"status": "success"})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/ask", methods=["POST"])
 def ask():
