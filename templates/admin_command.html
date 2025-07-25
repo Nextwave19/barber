@@ -102,6 +102,12 @@
             float: left;
         }
 
+        button.back {
+            background: #16a085;
+            color: white;
+            margin-left: 12px;
+        }
+
         input[type="text"], select {
             padding: 8px;
             border-radius: 6px;
@@ -138,15 +144,41 @@
             align-items: center;
             margin-bottom: 25px;
         }
+
+        .close-x {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        .slot-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            position: relative;
+        }
+
+        .slot-wrapper:hover .actions {
+            display: flex;
+        }
     </style>
 </head>
 <body>
 
 <div class="header-container">
     <h1>ברוך הבא, {{ session['username'] }} (מנהל)</h1>
-    <form method="GET" action="/logout">
-        <button class="logout">התנתק</button>
-    </form>
+    <div>
+        <form method="GET" action="/" style="display:inline;">
+            <button class="back">חזור להזמנות</button>
+        </form>
+        <form method="GET" action="/logout" style="display:inline;">
+            <button class="logout">התנתק</button>
+        </form>
+    </div>
 </div>
 
 <div class="section">
@@ -155,7 +187,7 @@
     {% for date, times in free_slots.items() %}
         <div style="margin-bottom: 8px;">
             <strong>{{ date }}</strong>
-            <form method="POST" action="/slot" class="inline">
+            <form method="POST" action="/slot" class="inline" style="display:inline;">
                 <input type="hidden" name="date" value="{{ date }}">
                 <input type="hidden" name="time" value="*">
                 <input type="hidden" name="action" value="remove">
@@ -165,22 +197,22 @@
 
         <div class="slots-container">
             {% for time in times %}
-                <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}">
-                    {{ time }}
-                    <div class="actions">
-                        <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
-                            <input type="hidden" name="time" value="{{ time }}">
-                            <input type="hidden" name="action" value="toggle">
-                            <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
-                        </form>
-                        <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
-                            <input type="hidden" name="time" value="{{ time }}">
-                            <input type="hidden" name="action" value="remove">
-                            <button type="submit">מחק</button>
-                        </form>
+                <div class="slot-wrapper">
+                    <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}">
+                        {{ time }}
                     </div>
+                    <form method="POST" action="/slot">
+                        <input type="hidden" name="date" value="{{ date }}">
+                        <input type="hidden" name="time" value="{{ time }}">
+                        <input type="hidden" name="action" value="remove">
+                        <button type="submit" class="close-x" title="הסר שעה">×</button>
+                    </form>
+                    <form method="POST" action="/slot">
+                        <input type="hidden" name="date" value="{{ date }}">
+                        <input type="hidden" name="time" value="{{ time }}">
+                        <input type="hidden" name="action" value="toggle">
+                        <button type="submit" class="add">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
+                    </form>
                 </div>
             {% endfor %}
         </div>
