@@ -117,6 +117,20 @@ def book():
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
+import datetime
+
+@app.context_processor
+def utility_processor():
+    def get_day_name(date_str):
+        days_hebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+        try:
+            day_num = datetime.datetime.strptime(date_str, "%Y-%m-%d").weekday()
+            return 'יום ' + days_hebrew[day_num]
+        except:
+            return ''
+    return dict(get_day_name=get_day_name)
+
+
 @app.route("/slot", methods=["POST"])
 def update_slot():
     if not session.get("is_admin"):
