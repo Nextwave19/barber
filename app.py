@@ -23,7 +23,7 @@ def init_free_slots():
              "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
     for i in range(7):
-        date_str = (today + timedelta(days=i)).strftime("%d/%m")
+        date_str = (today + timedelta(days=i)).strftime("%Y-%m-%d")
         free_slots[date_str] = times.copy()
     return free_slots
 
@@ -36,7 +36,7 @@ custom_knowledge = []
 @app.route("/")
 def index():
     return render_template("index.html")
-    
+
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -76,9 +76,18 @@ def logout():
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/login")
+
+    # הכנת מבנה שמפריד בין שעות רגילות לשעות כבויות
+    structured_slots = {}
+    for date, slots in free_slots.items():
+        structured_slots[date] = {
+            "enabled": [s for s in slots if " (כבוי)" not in s],
+            "disabled": [s for s in slots if " (כבוי)" in s]
+        }
+
     return render_template(
         "admin_command.html",
-        free_slots=free_slots,
+        free_slots=structured_slots,
         services_prices=services_prices,
         custom_knowledge=custom_knowledge
     )
@@ -104,6 +113,9 @@ def book():
     if date not in free_slots or time not in free_slots[date]:
         return jsonify({"error": "No availability at that time."}), 400
 
+    if " (כבוי)" in time:
+        return jsonify({"error": "Slot is currently disabled."}), 400
+
     price = services_prices.get(service)
     if not price:
         return jsonify({"error": "Unknown service."}), 400
@@ -117,19 +129,16 @@ def book():
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
 
-import datetime
-
 @app.context_processor
 def utility_processor():
     def get_day_name(date_str):
         days_hebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
         try:
-            day_num = datetime.datetime.strptime(date_str, "%Y-%m-%d").weekday()
+            day_num = datetime.strptime(date_str, "%Y-%m-%d").weekday()
             return 'יום ' + days_hebrew[day_num]
         except:
             return ''
     return dict(get_day_name=get_day_name)
-
 
 @app.route("/slot", methods=["POST"])
 def update_slot():
@@ -163,43 +172,45 @@ def update_bot_knowledge():
         custom_knowledge[:] = [item for item in custom_knowledge if item != content.strip()]
     return redirect("/admin_command")
 
-@app.route('/admin/update_slot', methods=['POST'])
+@app.route("/admin/update_slot", methods=["POST"])
 def update_slot_ajax():
-    try:
-        data = request.get_json()
-        date = data.get('date')
-        time = data.get('time')
-        action = data.get('action')
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
 
-        if not date or not time or not action:
-            return jsonify({"error": "Missing required fields"}), 400
+    data = request.get_json()
+    date = data.get('date')
+    time = data.get('time')
+    action = data.get('action')
 
-        if action == 'delete':
-            if date in free_slots and time in free_slots[date]:
-                free_slots[date].remove(time)
-                if not free_slots[date]:
-                    del free_slots[date]
-        elif action == 'disable':
-            if date in free_slots and time in free_slots[date]:
-                if ' (כבוי)' not in time:
-                    index = free_slots[date].index(time)
-                    free_slots[date][index] = f"{time} (כבוי)"
-        elif action == 'enable':
-            if date in free_slots:
-                updated_times = []
-                for t in free_slots[date]:
-                    if t.replace(" (כבוי)", "") == time:
-                        updated_times.append(time)
-                    else:
-                        updated_times.append(t)
-                free_slots[date] = updated_times
-        else:
-            return jsonify({"error": "Invalid action"}), 400
+    if not date or not time or not action:
+        return jsonify({"error": "Missing fields"}), 400
 
-        return jsonify({"status": "success"})
+    time_clean = time.replace(" (כבוי)", "")
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if date not in free_slots:
+        free_slots[date] = []
+
+    if action == "delete":
+        free_slots[date] = [t for t in free_slots[date] if time_clean not in t]
+        if not free_slots[date]:
+            del free_slots[date]
+
+    elif action == "disable":
+        if time_clean in free_slots[date]:
+            idx = free_slots[date].index(time_clean)
+            free_slots[date][idx] = time_clean + " (כבוי)"
+
+    elif action == "enable":
+        for i, t in enumerate(free_slots[date]):
+            if t.startswith(time_clean) and " (כבוי)" in t:
+                free_slots[date][i] = time_clean
+
+    elif action == "add":
+        if time_clean not in [t.replace(" (כבוי)", "") for t in free_slots[date]]:
+            free_slots[date].append(time_clean)
+            free_slots[date].sort()
+
+    return jsonify({"status": "success"})
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -265,7 +276,7 @@ Price: {price}₪
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  # מומלץ לשים כ־env var
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
