@@ -28,6 +28,7 @@ def init_free_slots():
     return free_slots
 
 free_slots = init_free_slots()
+disabled_slots = {}
 chat_history = []
 custom_knowledge = []
 
@@ -74,43 +75,51 @@ def logout():
 
 @app.route('/admin_command', methods=['GET', 'POST'])
 def admin_command():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
     if request.method == 'POST':
         action = request.form.get('action')
         date = request.form.get('date')
         time = request.form.get('time')
 
         if action == 'toggle':
-            # כיבוי/הפעלה של שעה
             if date in disabled_slots and time in disabled_slots[date]:
                 disabled_slots[date].remove(time)
             else:
                 disabled_slots.setdefault(date, []).append(time)
 
         elif action == 'remove':
-            # מחיקה
             if date in free_slots and time in free_slots[date]:
                 free_slots[date].remove(time)
             if date in disabled_slots and time in disabled_slots[date]:
                 disabled_slots[date].remove(time)
 
         elif action == 'add':
-            # הוספת שעה
-            if time and time not in free_slots.get(date, []):
-                free_slots.setdefault(date, []).append(time)
+            if time:
+                existing_times = [t.replace(" (כבוי)", "") for t in free_slots.get(date, [])]
+                if time not in existing_times:
+                    free_slots.setdefault(date, []).append(time)
+                    free_slots[date].sort()
 
         elif action == 'disable_day':
-            # כיבוי יום שלם
             disabled_slots[date] = free_slots.get(date, []).copy()
 
         elif action == 'enable_day':
-            # הפעלת כל היום
             disabled_slots[date] = []
 
         return redirect('/admin_command')
 
-    # אם זו בקשת GET – הצג את הדף
+    display_slots = {}
+    for date, times in free_slots.items():
+        display_slots[date] = []
+        for time in times:
+            is_disabled = time in disabled_slots.get(date, [])
+            display_time = time + " (כבוי)" if is_disabled else time
+            display_slots[date].append(display_time)
+
     return render_template('admin_command.html',
-                           free_slots=free_slots,
+                           free_slots=display_slots,
                            disabled_slots=disabled_slots,
                            custom_knowledge=custom_knowledge,
                            get_day_name=get_day_name)
@@ -299,7 +308,7 @@ Price: {price}₪
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')  # מומלץ לשים כ־env var
+        server.login('nextwaveaiandweb@gmail.com', 'vmhb kmke ptlk kdzs')
         server.send_message(msg)
         server.quit()
         print("Email sent successfully")
