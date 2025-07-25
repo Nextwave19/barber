@@ -46,14 +46,13 @@
             background-color: #95a5a6;
         }
 
-        .slot-button:hover .actions {
+        .slot-button.open .actions {
             display: flex;
         }
 
         .actions {
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
+            display: none;
+            flex-direction: column;
             gap: 5px;
             margin-top: 6px;
         }
@@ -69,6 +68,12 @@
             padding: 4px 8px;
             font-size: 12px;
             cursor: pointer;
+        }
+
+        .actions input[type="text"] {
+            padding: 4px;
+            font-size: 12px;
+            width: 90px;
         }
 
         .actions button:hover {
@@ -180,7 +185,7 @@
 
         <div class="slots-container">
             {% for time in times %}
-                <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}">
+                <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
                     {{ time }}
                     <form method="POST" action="/slot" style="display:inline;">
                         <input type="hidden" name="date" value="{{ date }}">
@@ -199,7 +204,7 @@
                             <input type="hidden" name="date" value="{{ date }}">
                             <input type="hidden" name="time" value="{{ time }}">
                             <input type="hidden" name="action" value="edit">
-                            <input type="text" name="new_time" placeholder="שנה ל..." required style="width: 80px;">
+                            <input type="text" name="new_time" placeholder="שנה ל..." required>
                             <button type="submit">ערוך</button>
                         </form>
                     </div>
@@ -244,6 +249,12 @@
         {% endfor %}
     </ul>
 </div>
+
+<script>
+    function toggleActions(element) {
+        element.classList.toggle('open');
+    }
+</script>
 
 </body>
 </html>
