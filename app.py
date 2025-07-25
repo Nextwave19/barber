@@ -150,7 +150,7 @@ def update_bot_knowledge():
     return redirect("/admin_command")
 
 @app.route('/admin/update_slot', methods=['POST'])
-def update_slot():
+def update_slot_ajax():
     try:
         data = request.get_json()
         date = data.get('date')
@@ -182,7 +182,6 @@ def update_slot():
         else:
             return jsonify({"error": "Invalid action"}), 400
 
-        save_slots()  # אם יש לך פונקציה כזו
         return jsonify({"status": "success"})
 
     except Exception as e:
