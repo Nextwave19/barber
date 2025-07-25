@@ -85,11 +85,15 @@ def admin_command():
             "disabled": [s for s in slots if " (כבוי)" in s]
         }
 
+    # זה מה שהיה חסר וגרם לשגיאה
+    disabled_slots = {date: structured_slots[date]["disabled"] for date in structured_slots}
+
     return render_template(
         "admin_command.html",
         free_slots=structured_slots,
         services_prices=services_prices,
-        custom_knowledge=custom_knowledge
+        custom_knowledge=custom_knowledge,
+        disabled_slots=disabled_slots
     )
 
 # --- API JSON ---
