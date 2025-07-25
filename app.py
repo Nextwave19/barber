@@ -23,12 +23,11 @@ def init_free_slots():
              "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
     for i in range(7):
-        date_str = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+        date_str = (today + timedelta(days=i)).strftime("%d/%m")
         free_slots[date_str] = times.copy()
     return free_slots
 
 free_slots = init_free_slots()
-disabled_slots = {}
 chat_history = []
 custom_knowledge = []
 
@@ -37,7 +36,7 @@ custom_knowledge = []
 @app.route("/")
 def index():
     return render_template("index.html")
-
+    
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -73,56 +72,16 @@ def logout():
     session.clear()
     return redirect("/")
 
-@app.route('/admin_command', methods=['GET', 'POST'])
+@app.route("/admin_command")
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/login")
-
-    if request.method == 'POST':
-        action = request.form.get('action')
-        date = request.form.get('date')
-        time = request.form.get('time')
-
-        if action == 'toggle':
-            if date in disabled_slots and time in disabled_slots[date]:
-                disabled_slots[date].remove(time)
-            else:
-                disabled_slots.setdefault(date, []).append(time)
-
-        elif action == 'remove':
-            if date in free_slots and time in free_slots[date]:
-                free_slots[date].remove(time)
-            if date in disabled_slots and time in disabled_slots[date]:
-                disabled_slots[date].remove(time)
-
-        elif action == 'add':
-            if time:
-                existing_times = [t.replace(" (כבוי)", "") for t in free_slots.get(date, [])]
-                if time not in existing_times:
-                    free_slots.setdefault(date, []).append(time)
-                    free_slots[date].sort()
-
-        elif action == 'disable_day':
-            disabled_slots[date] = free_slots.get(date, []).copy()
-
-        elif action == 'enable_day':
-            disabled_slots[date] = []
-
-        return redirect('/admin_command')
-
-    display_slots = {}
-    for date, times in free_slots.items():
-        display_slots[date] = []
-        for time in times:
-            is_disabled = time in disabled_slots.get(date, [])
-            display_time = time + " (כבוי)" if is_disabled else time
-            display_slots[date].append(display_time)
-
-    return render_template('admin_command.html',
-                           free_slots=display_slots,
-                           disabled_slots=disabled_slots,
-                           custom_knowledge=custom_knowledge,
-                           get_day_name=get_day_name)
+    return render_template(
+        "admin_command.html",
+        free_slots=free_slots,
+        services_prices=services_prices,
+        custom_knowledge=custom_knowledge
+    )
 
 # --- API JSON ---
 
@@ -145,9 +104,6 @@ def book():
     if date not in free_slots or time not in free_slots[date]:
         return jsonify({"error": "No availability at that time."}), 400
 
-    if " (כבוי)" in time:
-        return jsonify({"error": "Slot is currently disabled."}), 400
-
     price = services_prices.get(service)
     if not price:
         return jsonify({"error": "Unknown service."}), 400
@@ -160,17 +116,6 @@ def book():
         print("Error sending email:", e)
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service} ({price}₪)."})
-
-@app.context_processor
-def utility_processor():
-    def get_day_name(date_str):
-        days_hebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
-        try:
-            day_num = datetime.strptime(date_str, "%Y-%m-%d").weekday()
-            return 'יום ' + days_hebrew[day_num]
-        except:
-            return ''
-    return dict(get_day_name=get_day_name)
 
 @app.route("/slot", methods=["POST"])
 def update_slot():
@@ -205,44 +150,51 @@ def update_bot_knowledge():
     return redirect("/admin_command")
 
 @app.route("/admin/update_slot", methods=["POST"])
-def update_slot_ajax():
+def admin_update_slot():
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json()
-    date = data.get('date')
-    time = data.get('time')
-    action = data.get('action')
-
-    if not date or not time or not action:
-        return jsonify({"error": "Missing fields"}), 400
-
-    time_clean = time.replace(" (כבוי)", "")
+    date = data.get("date")
+    time = data.get("time")
+    action = data.get("action")
+    new_time = data.get("new_time")
 
     if date not in free_slots:
-        free_slots[date] = []
+        return jsonify({"error": "Invalid date"}), 400
 
-    if action == "delete":
-        free_slots[date] = [t for t in free_slots[date] if time_clean not in t]
-        if not free_slots[date]:
-            del free_slots[date]
-
-    elif action == "disable":
-        if time_clean in free_slots[date]:
-            idx = free_slots[date].index(time_clean)
-            free_slots[date][idx] = time_clean + " (כבוי)"
+    if action == "disable":
+        if time in free_slots[date]:
+            free_slots[date].remove(time)
+        return jsonify({"status": "disabled"})
 
     elif action == "enable":
-        for i, t in enumerate(free_slots[date]):
-            if t.startswith(time_clean) and " (כבוי)" in t:
-                free_slots[date][i] = time_clean
+        if time not in free_slots[date]:
+            free_slots[date].append(time)
+            free_slots[date].sort()
+        return jsonify({"status": "enabled"})
+
+    elif action == "delete":
+        if time in free_slots[date]:
+            free_slots[date].remove(time)
+        return jsonify({"status": "deleted"})
 
     elif action == "add":
-        if time_clean not in [t.replace(" (כבוי)", "") for t in free_slots[date]]:
-            free_slots[date].append(time_clean)
+        if time not in free_slots[date]:
+            free_slots[date].append(time)
             free_slots[date].sort()
+        return jsonify({"status": "added"})
 
-    return jsonify({"status": "success"})
+    elif action == "edit":
+        if time in free_slots[date] and new_time:
+            free_slots[date].remove(time)
+            if new_time not in free_slots[date]:
+                free_slots[date].append(new_time)
+                free_slots[date].sort()
+            return jsonify({"status": "edited", "new_time": new_time})
+
+    return jsonify({"error": "Invalid action"}), 400
+
 
 @app.route("/ask", methods=["POST"])
 def ask():
@@ -318,3 +270,5 @@ Price: {price}₪
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
+
+
