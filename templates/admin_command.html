@@ -2,11 +2,11 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>לוח ניהול תורים</title>
+    <title>ניהול לוח תורים</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .disabled-slot {
-            background-color: #d1d5db !important; /* אפור */
+            background-color: #d1d5db !important;
             color: #4b5563;
         }
         .accordion-content {
@@ -20,7 +20,6 @@
 <body class="bg-gray-100 p-6">
     <div class="max-w-6xl mx-auto">
         <h1 class="text-3xl font-bold mb-6 text-center">לוח ניהול תורים</h1>
-
         <a href="/" class="inline-block mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">חזרה להזמנות</a>
 
         {% for date, times in free_slots.items() %}
@@ -32,16 +31,15 @@
                     <div class="flex flex-wrap gap-2">
                         {% for time in times %}
                             <div class="flex items-center gap-2">
-                                <form method="POST" action="/admin_command" class="inline">
-                                    <input type="hidden" name="action" value="toggle">
+                                <form method="POST" action="/admin_command">
+                                    <input type="hidden" name="action" value="{% if disabled_slots.get(date) and time in disabled_slots[date] %}enable{% else %}disable{% endif %}">
                                     <input type="hidden" name="date" value="{{ date }}">
                                     <input type="hidden" name="time" value="{{ time }}">
-                                    <button type="submit"
-                                        class="px-3 py-1 rounded border {% if disabled_slots.get(date) and time in disabled_slots[date] %}disabled-slot{% else %}bg-green-100 hover:bg-green-200{% endif %}">
+                                    <button type="submit" class="px-3 py-1 rounded border {% if disabled_slots.get(date) and time in disabled_slots[date] %}disabled-slot{% else %}bg-green-100 hover:bg-green-200{% endif %}">
                                         {{ time }}
                                     </button>
                                 </form>
-                                <form method="POST" action="/admin_command" class="inline">
+                                <form method="POST" action="/admin_command">
                                     <input type="hidden" name="action" value="remove">
                                     <input type="hidden" name="date" value="{{ date }}">
                                     <input type="hidden" name="time" value="{{ time }}">
@@ -85,12 +83,11 @@
     </div>
 
     <script>
-        // פתיחה אוטומטית של יום נוכחי (אופציונלי)
         const accordions = document.querySelectorAll('.accordion');
         const today = new Date().toISOString().split('T')[0];
-        accordions.forEach(accordion => {
-            if (accordion.querySelector('button').innerText.includes(today)) {
-                accordion.classList.add('open');
+        accordions.forEach(acc => {
+            if (acc.querySelector('button').innerText.includes(today)) {
+                acc.classList.add('open');
             }
         });
     </script>
