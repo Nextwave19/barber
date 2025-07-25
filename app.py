@@ -76,9 +76,11 @@ def logout():
 def admin_command():
     if not session.get("is_admin"):
         return redirect("/login")
+
     return render_template(
         "admin_command.html",
         free_slots=free_slots,
+        disabled_slots=disabled_slots,  # ← זה מה שהיה חסר
         services_prices=services_prices,
         custom_knowledge=custom_knowledge
     )
