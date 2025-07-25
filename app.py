@@ -121,20 +121,43 @@ def book():
 def update_slot():
     if not session.get("is_admin"):
         return redirect("/login")
+
     date = request.form.get("date")
     time = request.form.get("time")
     action = request.form.get("action")
+    new_time = request.form.get("new_time")
 
-    if not date or not time or action not in ["remove", "add"]:
+    if not date or not time or not action:
         return "Invalid input", 400
 
-    if action == "remove":
-        if time in free_slots.get(date, []):
+    if date not in free_slots:
+        return "Invalid date", 400
+
+    if action == "remove" or action == "delete":
+        if time in free_slots[date]:
             free_slots[date].remove(time)
-    elif action == "add":
-        if time not in free_slots.get(date, []):
+
+    elif action == "disable":
+        if time in free_slots[date]:
+            free_slots[date].remove(time)
+
+    elif action == "enable":
+        if time not in free_slots[date]:
             free_slots[date].append(time)
             free_slots[date].sort()
+
+    elif action == "add":
+        if time not in free_slots[date]:
+            free_slots[date].append(time)
+            free_slots[date].sort()
+
+    elif action == "edit":
+        if time in free_slots[date] and new_time:
+            free_slots[date].remove(time)
+            if new_time not in free_slots[date]:
+                free_slots[date].append(new_time)
+                free_slots[date].sort()
+
     return redirect("/admin_command")
 
 @app.route("/bot-knowledge", methods=["POST"])
