@@ -190,7 +190,7 @@
         <div style="margin-bottom: 8px;">
             <strong>{{ date }}</strong>
             <form method="POST" action="/slot" class="inline">
-                <input type="hidden" name="date" value="{{ date }}">
+                <input type="hidden" name="day" value="{{ date }}">
                 <input type="hidden" name="time" value="*">
                 <input type="hidden" name="action" value="remove">
                 <button class="add">ביטול כל התורים ליום זה</button>
@@ -202,20 +202,20 @@
                 <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
                     {{ time }}
                     <form method="POST" action="/slot" style="display:inline;">
-                        <input type="hidden" name="date" value="{{ date }}">
+                        <input type="hidden" name="day" value="{{ date }}">
                         <input type="hidden" name="time" value="{{ time }}">
                         <input type="hidden" name="action" value="remove">
                         <button class="remove-x" type="submit">&times;</button>
                     </form>
                     <div class="actions">
                         <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
+                            <input type="hidden" name="day" value="{{ date }}">
                             <input type="hidden" name="time" value="{{ time }}">
                             <input type="hidden" name="action" value="toggle">
                             <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
                         </form>
                         <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
+                            <input type="hidden" name="day" value="{{ date }}">
                             <input type="hidden" name="time" value="{{ time }}">
                             <input type="hidden" name="action" value="edit">
                             <input type="text" name="new_time" placeholder="שנה ל..." required>
@@ -227,7 +227,7 @@
         </div>
 
         <form method="POST" action="/slot" class="inline">
-            <input type="hidden" name="date" value="{{ date }}">
+            <input type="hidden" name="day" value="{{ date }}">
             <label>הוסף שעה:</label>
             <input type="text" name="time" placeholder="למשל 16:30" required>
             <input type="hidden" name="action" value="add">
