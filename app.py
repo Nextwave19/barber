@@ -80,48 +80,49 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
-    # Load current slots
+    # טען את המידע מהקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
 
     if request.method == "POST":
         action = request.form.get("action")
-        date = request.form.get("date")
-        time = request.form.get("time")
-        day = request.form.get("day")
+        date = request.form.get("date", "").strip()
+        time = request.form.get("time", "").strip()
+        day = request.form.get("day", "").strip()
+        new_time = request.form.get("new_time", "").strip()
 
-        # מחיקה של שעה
-        if action == "delete" and date and time:
+        if action == "delete":
             if date in free_slots and time in free_slots[date]:
                 free_slots[date].remove(time)
+                if not free_slots[date]:
+                    del free_slots[date]
                 save_json("free_slots.json", free_slots)
             if date in disabled_slots and time in disabled_slots[date]:
                 disabled_slots[date].remove(time)
+                if not disabled_slots[date]:
+                    del disabled_slots[date]
                 save_json("disabled_slots.json", disabled_slots)
 
-        # כיבוי של שעה
-        elif action == "disable" and date and time:
-            if date not in disabled_slots:
-                disabled_slots[date] = []
-            if time not in disabled_slots[date]:
-                disabled_slots[date].append(time)
-                save_json("disabled_slots.json", disabled_slots)
-
-        # עריכה של שעה
-        elif action == "edit" and date and time:
-            new_time = request.form.get("new_time")
-            if new_time:
-                if date in free_slots and time in free_slots[date]:
-                    free_slots[date].remove(time)
-                    free_slots[date].append(new_time)
-                    free_slots[date] = sorted(free_slots[date])
-                    save_json("free_slots.json", free_slots)
-                if date in disabled_slots and time in disabled_slots[date]:
-                    disabled_slots[date].remove(time)
-                    disabled_slots[date].append(new_time)
+        elif action == "disable":
+            if date in free_slots and time in free_slots[date]:
+                if date not in disabled_slots:
+                    disabled_slots[date] = []
+                if time not in disabled_slots[date]:
+                    disabled_slots[date].append(time)
                     save_json("disabled_slots.json", disabled_slots)
 
-        # השבתת יום שלם
+        elif action == "edit" and new_time:
+            if date in free_slots and time in free_slots[date]:
+                free_slots[date].remove(time)
+                free_slots[date].append(new_time)
+                free_slots[date] = sorted(list(set(free_slots[date])))
+                save_json("free_slots.json", free_slots)
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
+                disabled_slots[date].append(new_time)
+                disabled_slots[date] = sorted(list(set(disabled_slots[date])))
+                save_json("disabled_slots.json", disabled_slots)
+
         elif action == "disable_day" and day:
             if day in free_slots:
                 if day not in disabled_slots:
@@ -131,16 +132,23 @@ def admin_command():
                         disabled_slots[day].append(t)
                 save_json("disabled_slots.json", disabled_slots)
 
-    # תרגום ימים לעברית
-    day_names = {
-        "2025-07-27": "ראשון",
-        "2025-07-28": "שני",
-        "2025-07-29": "שלישי",
-        "2025-07-30": "רביעי",
-        "2025-07-31": "חמישי",
-        "2025-08-01": "שישי",
-        "2025-08-02": "שבת"
-    }
+    # תרגום ימים לעברית (שים לב לשנות בהתאם לתאריכים האמיתיים שלך)
+    day_names = {}
+    for d in sorted(set(list(free_slots.keys()) + list(disabled_slots.keys()))):
+        try:
+            heb_day = datetime.strptime(d, "%Y-%m-%d").strftime("%A")
+            heb_map = {
+                "Sunday": "ראשון",
+                "Monday": "שני",
+                "Tuesday": "שלישי",
+                "Wednesday": "רביעי",
+                "Thursday": "חמישי",
+                "Friday": "שישי",
+                "Saturday": "שבת"
+            }
+            day_names[d] = heb_map.get(heb_day, heb_day)
+        except:
+            day_names[d] = d  # אם יש בעיה, פשוט שים את התאריך
 
     return render_template("admin_command.html",
                            free_slots=free_slots,
