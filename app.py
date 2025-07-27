@@ -96,18 +96,19 @@ def admin_command():
     disabled_slots = load_json("disabled_slots.json")
 
     if request.method == "POST":
-        action = request.form.get("action")
-        date = request.form.get("day", "").strip()
+        action = request.form.get("action", "").strip()
+        date = request.form.get("date", "").strip()  # במקום day
         time = request.form.get("time", "").strip()
-        day = request.form.get("day", "").strip()
         new_time = request.form.get("new_time", "").strip()
 
         if action == "delete":
+            # מחק מהזמנים הפנויים
             if date in free_slots and time in free_slots[date]:
                 free_slots[date].remove(time)
                 if not free_slots[date]:
                     del free_slots[date]
                 save_json("free_slots.json", free_slots)
+            # מחק מהזמנים המושבתים
             if date in disabled_slots and time in disabled_slots[date]:
                 disabled_slots[date].remove(time)
                 if not disabled_slots[date]:
@@ -120,7 +121,14 @@ def admin_command():
                     disabled_slots[date] = []
                 if time not in disabled_slots[date]:
                     disabled_slots[date].append(time)
-                    save_json("disabled_slots.json", disabled_slots)
+                save_json("disabled_slots.json", disabled_slots)
+
+        elif action == "enable":
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
+                if not disabled_slots[date]:
+                    del disabled_slots[date]
+                save_json("disabled_slots.json", disabled_slots)
 
         elif action == "edit" and new_time:
             if date in free_slots and time in free_slots[date]:
@@ -134,18 +142,29 @@ def admin_command():
                 disabled_slots[date] = sorted(list(set(disabled_slots[date])))
                 save_json("disabled_slots.json", disabled_slots)
 
-        elif action == "disable_day" and day:
-            if day in free_slots:
-                if day not in disabled_slots:
-                    disabled_slots[day] = []
-                for t in free_slots[day]:
-                    if t not in disabled_slots[day]:
-                        disabled_slots[day].append(t)
+        elif action == "disable_day":
+            if date in free_slots:
+                if date not in disabled_slots:
+                    disabled_slots[date] = []
+                for t in free_slots[date]:
+                    if t not in disabled_slots[date]:
+                        disabled_slots[date].append(t)
                 save_json("disabled_slots.json", disabled_slots)
 
-    # תרגום ימים לעברית (שים לב לשנות בהתאם לתאריכים האמיתיים שלך)
+        elif action == "add_slot":
+            new_slot = request.form.get("new_slot", "").strip()
+            if new_slot:
+                if date not in free_slots:
+                    free_slots[date] = []
+                if new_slot not in free_slots[date]:
+                    free_slots[date].append(new_slot)
+                    free_slots[date] = sorted(free_slots[date])
+                    save_json("free_slots.json", free_slots)
+
+    # תרגום ימים לעברית
     day_names = {}
-    for d in sorted(set(list(free_slots.keys()) + list(disabled_slots.keys()))):
+    all_days = sorted(set(free_slots.keys()) | set(disabled_slots.keys()))
+    for d in all_days:
         try:
             heb_day = datetime.strptime(d, "%Y-%m-%d").strftime("%A")
             heb_map = {
@@ -158,15 +177,13 @@ def admin_command():
                 "Saturday": "שבת"
             }
             day_names[d] = heb_map.get(heb_day, heb_day)
-        except:
-            day_names[d] = d  # אם יש בעיה, פשוט שים את התאריך
+        except Exception as e:
+            day_names[d] = d  # אם יש בעיה בתרגום
 
     return render_template("admin_command.html",
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
                            day_names=day_names)
-
-
 
 
 # --- API JSON ---
