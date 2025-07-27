@@ -97,7 +97,7 @@ def admin_command():
 
     if request.method == "POST":
         action = request.form.get("action")
-        date = request.form.get("date", "").strip()
+        date = request.form.get("day", "").strip()
         time = request.form.get("time", "").strip()
         day = request.form.get("day", "").strip()
         new_time = request.form.get("new_time", "").strip()
