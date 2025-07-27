@@ -10,11 +10,9 @@
             padding: 20px;
             margin: 0;
         }
-
         h1, h2, h3 {
             color: #2c3e50;
         }
-
         .section {
             background: #ffffff;
             padding: 25px;
@@ -22,14 +20,12 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-
         .slots-container {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 10px;
         }
-
         .slot-button {
             position: relative;
             padding: 10px 30px 10px 10px;
@@ -40,26 +36,21 @@
             cursor: pointer;
             transition: 0.3s;
         }
-
         .slot-button.disabled {
             background-color: #95a5a6;
         }
-
         .slot-button.open .actions {
             display: flex;
         }
-
         .actions {
             display: none;
             flex-direction: column;
             gap: 5px;
             margin-top: 6px;
         }
-
         .actions form {
             margin: 0;
         }
-
         .actions button {
             background: #f0f0f0;
             border: 1px solid #ccc;
@@ -68,17 +59,14 @@
             font-size: 12px;
             cursor: pointer;
         }
-
         .actions input[type="text"] {
             padding: 4px;
             font-size: 12px;
             width: 90px;
         }
-
         .actions button:hover {
             background: #e0e0e0;
         }
-
         .remove-x {
             position: absolute;
             top: 4px;
@@ -91,11 +79,9 @@
             cursor: pointer;
             z-index: 2;
         }
-
         .remove-x:hover {
             color: #ff4d4d;
         }
-
         button.add {
             background: #3498db;
             color: white;
@@ -104,11 +90,9 @@
             border-radius: 8px;
             cursor: pointer;
         }
-
         button.add:hover {
             background: #2980b9;
         }
-
         button.remove {
             background: #e74c3c;
             color: white;
@@ -117,48 +101,40 @@
             border-radius: 8px;
             cursor: pointer;
         }
-
         button.remove:hover {
             background: #c0392b;
         }
-
         label {
             margin-left: 8px;
             font-weight: bold;
             color: #555;
         }
-
         input[type="text"] {
             padding: 8px;
             border-radius: 6px;
             border: 1px solid #ccc;
             font-size: 14px;
         }
-
         ul {
             list-style: square;
             padding-right: 20px;
         }
-
         ul li {
             margin-bottom: 6px;
             color: #333;
         }
-
         hr {
             margin: 20px 0;
             border: 0;
             height: 1px;
             background: #ddd;
         }
-
         .header-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
         }
-
         .back-button {
             background: #bdc3c7;
             color: black;
@@ -167,7 +143,6 @@
             border-radius: 8px;
             cursor: pointer;
         }
-
         .back-button:hover {
             background: #95a5a6;
         }
@@ -185,72 +160,67 @@
 <div class="section">
     <h2>ניהול תורים לפי יום</h2>
 
-  {% for date, times in free_slots.items() %}
-    {% if ' - ' in date %}
-  {% set day_name, date_part = date.split(' - ') %}
-{% else %}
-  {% set date_part = date %}
-  {% set day_name = '' %}
-{% endif %}
-    <div class="day-section">
-        <strong>{{ day_name }} ({{ date_part }})</strong>
-        <input type="hidden" name="date" value="{{ date }}">
+    {% for date, times in free_slots.items() %}
+        {% set day_name, date_part = date.split(' - ') %}
+        <div class="day-section">
+            <strong>{{ day_name }} ({{ date_part }})</strong>
+            <input type="hidden" name="date" value="{{ date }}">
 
-        {% if date in disabled_days %}
-            <form method="POST" action="/slot" class="inline">
-                <input type="hidden" name="date" value="{{ date }}">
-                <input type="hidden" name="action" value="enable_day">
-                <button class="add">הפעל את היום</button>
-            </form>
-        {% else %}
-            <form method="POST" action="/slot" class="inline">
-                <input type="hidden" name="date" value="{{ date }}">
-                <input type="hidden" name="action" value="disable_day">
-                <button class="remove">השבת את היום</button>
-            </form>
-        {% endif %}
-    </div>
-
-    {% if date not in disabled_days %}
-        <div class="slots-container">
-            {% for time in times %}
-                <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
-                    {{ time }}
-                    <form method="POST" action="/slot" style="display:inline;">
-                        <input type="hidden" name="date" value="{{ date }}">
-                        <input type="hidden" name="time" value="{{ time }}">
-                        <input type="hidden" name="action" value="remove">
-                        <button class="remove-x" type="submit">&times;</button>
-                    </form>
-                    <div class="actions">
-                        <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
-                            <input type="hidden" name="time" value="{{ time }}">
-                            <input type="hidden" name="action" value="toggle">
-                            <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
-                        </form>
-                        <form method="POST" action="/slot">
-                            <input type="hidden" name="date" value="{{ date }}">
-                            <input type="hidden" name="time" value="{{ time }}">
-                            <input type="hidden" name="action" value="edit">
-                            <input type="text" name="new_time" placeholder="שנה ל..." required>
-                            <button type="submit">ערוך</button>
-                        </form>
-                    </div>
-                </div>
-            {% endfor %}
+            {% if date in disabled_days %}
+                <form method="POST" action="/slot" class="inline">
+                    <input type="hidden" name="date" value="{{ date }}">
+                    <input type="hidden" name="action" value="enable_day">
+                    <button class="add">הפעל את היום</button>
+                </form>
+            {% else %}
+                <form method="POST" action="/slot" class="inline">
+                    <input type="hidden" name="date" value="{{ date }}">
+                    <input type="hidden" name="action" value="disable_day">
+                    <button class="remove">השבת את היום</button>
+                </form>
+            {% endif %}
         </div>
 
-        <form method="POST" action="/slot" class="inline">
-            <input type="hidden" name="date" value="{{ date }}">
-            <label>הוסף שעה:</label>
-            <input type="text" name="time" placeholder="למשל 16:30" required>
-            <input type="hidden" name="action" value="add">
-            <button class="add">הוסף שעה</button>
-        </form>
-    {% endif %}
-    <hr>
-  {% endfor %}
+        {% if date not in disabled_days %}
+            <div class="slots-container">
+                {% for time in times %}
+                    <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
+                        {{ time }}
+                        <form method="POST" action="/slot" style="display:inline;">
+                            <input type="hidden" name="date" value="{{ date }}">
+                            <input type="hidden" name="time" value="{{ time }}">
+                            <input type="hidden" name="action" value="remove">
+                            <button class="remove-x" type="submit">&times;</button>
+                        </form>
+                        <div class="actions">
+                            <form method="POST" action="/slot">
+                                <input type="hidden" name="date" value="{{ date }}">
+                                <input type="hidden" name="time" value="{{ time }}">
+                                <input type="hidden" name="action" value="toggle">
+                                <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
+                            </form>
+                            <form method="POST" action="/slot">
+                                <input type="hidden" name="date" value="{{ date }}">
+                                <input type="hidden" name="time" value="{{ time }}">
+                                <input type="hidden" name="action" value="edit">
+                                <input type="text" name="new_time" placeholder="שנה ל..." required>
+                                <button type="submit">ערוך</button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <form method="POST" action="/slot" class="inline">
+                <input type="hidden" name="date" value="{{ date }}">
+                <label>הוסף שעה:</label>
+                <input type="text" name="time" placeholder="למשל 16:30" required>
+                <input type="hidden" name="action" value="add">
+                <button class="add">הוסף שעה</button>
+            </form>
+        {% endif %}
+        <hr>
+    {% endfor %}
 </div>
 
 <div class="section">
