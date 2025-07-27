@@ -184,35 +184,35 @@
 </div>
 
 <div class="section">
-    <h2>ניהול תורים לפי יום</h2>
+    <h2>ניהול תורים לפי יום בשבוע</h2>
 
-    {% for date, times in free_slots.items() %}
+    {% for day, times in weekly_slots.items() %}
         <div style="margin-bottom: 8px;">
-            <strong>{{ date }}</strong>
+            <strong>{{ day }}</strong>
             <form method="POST" action="/slot" class="inline">
                 <input type="hidden" name="day" value="{{ day }}">
                 <input type="hidden" name="time" value="*">
                 <input type="hidden" name="action" value="remove">
-                <button class="add">ביטול כל התורים ליום זה</button>
+                <button class="add">ביטול כל התורים ביום זה</button>
             </form>
         </div>
 
         <div class="slots-container">
             {% for time in times %}
-                <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
+                <div class="slot-button {% if time in disabled_slots[day] %}disabled{% endif %}" onclick="toggleActions(this)">
                     {{ time }}
                     <form method="POST" action="/slot" style="display:inline;">
-                        <input type="hidden" name="day" value="{{ date }}">
+                        <input type="hidden" name="day" value="{{ day }}">
                         <input type="hidden" name="time" value="{{ time }}">
                         <input type="hidden" name="action" value="remove">
                         <button class="remove-x" type="submit">&times;</button>
                     </form>
                     <div class="actions">
                         <form method="POST" action="/slot">
-                            <input type="hidden" name="day" value="{{ date }}">
+                            <input type="hidden" name="day" value="{{ day }}">
                             <input type="hidden" name="time" value="{{ time }}">
                             <input type="hidden" name="action" value="toggle">
-                            <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
+                            <button type="submit">{% if time in disabled_slots[day] %}הפעל{% else %}כבה{% endif %}</button>
                         </form>
                         <form method="POST" action="/slot">
                             <input type="hidden" name="day" value="{{ day }}">
