@@ -91,114 +91,71 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
-    # טען את המידע מהקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
+    disabled_days = load_json("disabled_days.json")
     services_prices = load_json("services_prices.json")
     custom_knowledge = load_json("custom_knowledge.json")
 
     if request.method == "POST":
-        action = request.form.get("action", "").strip()
-        date = request.form.get("date", "").strip()
-        time = request.form.get("time", "").strip()
-        new_time = request.form.get("new_time", "").strip()
+        action = request.form.get("action")
+        date = request.form.get("date")
+        hour = request.form.get("hour")
 
-        if action == "delete":
-            if date in free_slots and time in free_slots[date]:
-                free_slots[date].remove(time)
+        if action == "disable_slot":
+            if date not in disabled_slots:
+                disabled_slots[date] = []
+            if hour not in disabled_slots[date]:
+                disabled_slots[date].append(hour)
+            save_json("disabled_slots.json", disabled_slots)
+
+        elif action == "enable_slot":
+            if date in disabled_slots and hour in disabled_slots[date]:
+                disabled_slots[date].remove(hour)
+                if not disabled_slots[date]:
+                    del disabled_slots[date]
+                save_json("disabled_slots.json", disabled_slots)
+
+        elif action == "delete_slot":
+            if date in free_slots and hour in free_slots[date]:
+                free_slots[date].remove(hour)
                 if not free_slots[date]:
                     del free_slots[date]
                 save_json("free_slots.json", free_slots)
-            if date in disabled_slots and time in disabled_slots[date]:
-                disabled_slots[date].remove(time)
+            if date in disabled_slots and hour in disabled_slots[date]:
+                disabled_slots[date].remove(hour)
                 if not disabled_slots[date]:
                     del disabled_slots[date]
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "disable":
-            if date in free_slots and time in free_slots[date]:
-                if date not in disabled_slots:
-                    disabled_slots[date] = []
-                if time not in disabled_slots[date]:
-                    disabled_slots[date].append(time)
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "enable":
-            if date in disabled_slots and time in disabled_slots[date]:
-                disabled_slots[date].remove(time)
-                if not disabled_slots[date]:
-                    del disabled_slots[date]
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "edit" and new_time:
-            if date in free_slots and time in free_slots[date]:
-                free_slots[date].remove(time)
-                free_slots[date].append(new_time)
-                free_slots[date] = sorted(list(set(free_slots[date])))
-                save_json("free_slots.json", free_slots)
-            if date in disabled_slots and time in disabled_slots[date]:
-                disabled_slots[date].remove(time)
-                disabled_slots[date].append(new_time)
-                disabled_slots[date] = sorted(list(set(disabled_slots[date])))
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "disable_day":
-            if date in free_slots:
-                if date not in disabled_slots:
-                    disabled_slots[date] = []
-                for t in free_slots[date]:
-                    if t not in disabled_slots[date]:
-                        disabled_slots[date].append(t)
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "enable_day":
-            if date in disabled_slots:
-                del disabled_slots[date]
                 save_json("disabled_slots.json", disabled_slots)
 
         elif action == "add_slot":
-            new_slot = request.form.get("new_slot", "").strip()
-            if new_slot:
-                if date not in free_slots:
-                    free_slots[date] = []
-                if new_slot not in free_slots[date]:
-                    free_slots[date].append(new_slot)
-                    free_slots[date] = sorted(free_slots[date])
-                    save_json("free_slots.json", free_slots)
+            if date not in free_slots:
+                free_slots[date] = []
+            if hour not in free_slots[date]:
+                free_slots[date].append(hour)
+                free_slots[date].sort()
+            save_json("free_slots.json", free_slots)
 
-    # תרגום ימים לעברית
-    day_names = {}
-    all_days = sorted(set(free_slots.keys()) | set(disabled_slots.keys()))
-    for d in all_days:
-        try:
-            heb_day = datetime.strptime(d, "%d/%m").strftime("%A")
-            heb_map = {
-                "Sunday": "ראשון",
-                "Monday": "שני",
-                "Tuesday": "שלישי",
-                "Wednesday": "רביעי",
-                "Thursday": "חמישי",
-                "Friday": "שישי",
-                "Saturday": "שבת"
-            }
-            day_names[d] = heb_map.get(heb_day, heb_day)
-        except Exception as e:
-            day_names[d] = d
-
-    # מחשב אילו ימים כבויים לגמרי (כל השעות שבהם מושבתות)
-    disabled_days = []
-    for date, times in free_slots.items():
-        if date in disabled_slots:
-            if set(times) == set(disabled_slots.get(date, [])):
+        elif action == "disable_day":
+            if date not in disabled_days:
                 disabled_days.append(date)
+                save_json("disabled_days.json", disabled_days)
 
-   return render_template("admin_command.html",
-                       free_slots=free_slots,
-                       disabled_slots=disabled_slots,
-                       services_prices=services_prices,
-                       custom_knowledge=custom_knowledge,
-                       disabled_days=disabled_days,
-                       datetime=datetime)
+        elif action == "enable_day":
+            if date in disabled_days:
+                disabled_days.remove(date)
+                save_json("disabled_days.json", disabled_days)
+
+        return redirect("/admin_command")
+
+    import datetime
+    return render_template("admin_command.html",
+                           free_slots=free_slots,
+                           disabled_slots=disabled_slots,
+                           services_prices=services_prices,
+                           custom_knowledge=custom_knowledge,
+                           disabled_days=disabled_days,
+                           datetime=datetime)
 
 
 # --- API JSON ---
