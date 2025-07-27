@@ -192,13 +192,13 @@ def admin_command():
             if set(times) == set(disabled_slots.get(date, [])):
                 disabled_days.append(date)
 
-    return render_template("admin_command.html",
-                           free_slots=free_slots,
-                           disabled_slots=disabled_slots,
-                           day_names=day_names,
-                           services_prices=services_prices,
-                           custom_knowledge=custom_knowledge,
-                           disabled_days=disabled_days)
+   return render_template("admin_command.html",
+                       free_slots=free_slots,
+                       disabled_slots=disabled_slots,
+                       services_prices=services_prices,
+                       custom_knowledge=custom_knowledge,
+                       disabled_days=disabled_days,
+                       datetime=datetime)
 
 
 # --- API JSON ---
