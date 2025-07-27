@@ -94,6 +94,8 @@ def admin_command():
     # טען את המידע מהקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
+    services_prices = load_json("services_prices.json")
+    custom_knowledge = load_json("custom_knowledge.json")
 
     if request.method == "POST":
         action = request.form.get("action", "").strip()
@@ -183,10 +185,21 @@ def admin_command():
         except Exception as e:
             day_names[d] = d
 
+    # מחשב אילו ימים כבויים לגמרי (כל השעות שבהם מושבתות)
+    disabled_days = []
+    for date, times in free_slots.items():
+        if date in disabled_slots:
+            if set(times) == set(disabled_slots.get(date, [])):
+                disabled_days.append(date)
+
     return render_template("admin_command.html",
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
-                           day_names=day_names)
+                           day_names=day_names,
+                           services_prices=services_prices,
+                           custom_knowledge=custom_knowledge,
+                           disabled_days=disabled_days)
+
 
 # --- API JSON ---
 
