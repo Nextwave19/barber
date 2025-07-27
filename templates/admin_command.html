@@ -185,11 +185,14 @@
 <div class="section">
     <h2>ניהול תורים לפי יום</h2>
 
-   {% for date_str, times in free_slots.items() %}
+  {% for date_str, times in free_slots.items() %}
     {% set date_obj = date_str | todatetime('%Y-%m-%d') %}
-    {% set weekday = date_obj.strftime('%A') %}
-    <div style="margin-bottom: 8px;">
-        <strong>{{ weekday }} ({{ date_str }})</strong>
+    {% set weekday_index = date_obj.weekday() %}
+    {% set weekday = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון'][weekday_index] %}
+    <div class="day-section">
+        <strong>{{ weekday }} ({{ date_obj.strftime('%d/%m/%Y') }})</strong>
+        <input type="hidden" name="date" value="{{ date_str }}">
+
 
             {% if date in disabled_days %}
                 <form method="POST" action="/slot" class="inline">
