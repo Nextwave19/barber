@@ -171,7 +171,7 @@ def admin_command():
     all_days = sorted(set(free_slots.keys()) | set(disabled_slots.keys()))
     for d in all_days:
         try:
-            heb_day = datetime.strptime(d, "%Y-%m-%d").strftime("%A")
+            heb_day = datetime.strptime(d, "%d/%m").strftime("%A")
             heb_map = {
                 "Sunday": "ראשון",
                 "Monday": "שני",
