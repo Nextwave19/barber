@@ -36,7 +36,7 @@ def init_free_slots():
              "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
     for i in range(7):
-        date_str = (today + timedelta(days=i)).strftime("%Y-%m-%d")
+        date_str = (today + timedelta(days=i)).strftime("%d/%m")
         free_slots[date_str] = times.copy()
     return free_slots
 
