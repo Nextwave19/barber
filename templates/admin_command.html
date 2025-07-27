@@ -201,7 +201,7 @@
                 <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
                     {{ time }}
                     <form method="POST" action="/slot" style="display:inline;">
-                        <input type="hidden" name="day" value="{{ date }}">
+                        <input type="hidden" name="day" value="{{ day }}">
                         <input type="hidden" name="time" value="{{ time }}">
                         <input type="hidden" name="action" value="remove">
                         <button class="remove-x" type="submit">&times;</button>
