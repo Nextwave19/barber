@@ -186,7 +186,7 @@
     <h2>ניהול תורים לפי יום</h2>
 
   {% for date, times in free_slots.items() %}
-    {% set date_obj = date | todatetime('%Y-%m-%d') %}
+    {% set date_obj = datetime.strptime(date, "%d/%m") %}
     {% set weekday_index = date_obj.weekday() %}
     {% set weekday = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון'][weekday_index] %}
     <div class="day-section">
