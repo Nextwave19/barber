@@ -186,7 +186,12 @@
     <h2>ניהול תורים לפי יום</h2>
 
   {% for date, times in free_slots.items() %}
-    {% set day_name, date_part = date.split(' - ') %}
+    {% if ' - ' in date %}
+  {% set day_name, date_part = date.split(' - ') %}
+{% else %}
+  {% set date_part = date %}
+  {% set day_name = '' %}
+{% endif %}
     <div class="day-section">
         <strong>{{ day_name }} ({{ date_part }})</strong>
         <input type="hidden" name="date" value="{{ date }}">
