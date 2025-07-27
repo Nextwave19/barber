@@ -203,14 +203,14 @@
                     {{ time }}
                     <form method="POST" action="/slot" style="display:inline;">
                         <input type="hidden" name="day" value="{{ date }}">
-                        <input type="hidden" name="hour" value="{{ hour }}">
+                        <input type="hidden" name="time" value="{{ time }}">
                         <input type="hidden" name="action" value="remove">
                         <button class="remove-x" type="submit">&times;</button>
                     </form>
                     <div class="actions">
                         <form method="POST" action="/slot">
                             <input type="hidden" name="day" value="{{ date }}">
-                            <input type="hidden" name="hour" value="{{ hour }}">
+                            <input type="hidden" name="time" value="{{ time }}">
                             <input type="hidden" name="action" value="toggle">
                             <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
                         </form>
@@ -227,7 +227,7 @@
         </div>
 
         <form method="POST" action="/slot" class="inline">
-            <input type="hidden" name="day" value="{{ date }}">
+            <input type="hidden" name="day" value="{{ day }}">
             <label>הוסף שעה:</label>
             <input type="text" name="time" placeholder="למשל 16:30" required>
             <input type="hidden" name="action" value="add">
