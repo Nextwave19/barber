@@ -97,18 +97,16 @@ def admin_command():
 
     if request.method == "POST":
         action = request.form.get("action", "").strip()
-        date = request.form.get("date", "").strip()  # במקום day
+        date = request.form.get("date", "").strip()
         time = request.form.get("time", "").strip()
         new_time = request.form.get("new_time", "").strip()
 
         if action == "delete":
-            # מחק מהזמנים הפנויים
             if date in free_slots and time in free_slots[date]:
                 free_slots[date].remove(time)
                 if not free_slots[date]:
                     del free_slots[date]
                 save_json("free_slots.json", free_slots)
-            # מחק מהזמנים המושבתים
             if date in disabled_slots and time in disabled_slots[date]:
                 disabled_slots[date].remove(time)
                 if not disabled_slots[date]:
@@ -151,6 +149,11 @@ def admin_command():
                         disabled_slots[date].append(t)
                 save_json("disabled_slots.json", disabled_slots)
 
+        elif action == "enable_day":
+            if date in disabled_slots:
+                del disabled_slots[date]
+                save_json("disabled_slots.json", disabled_slots)
+
         elif action == "add_slot":
             new_slot = request.form.get("new_slot", "").strip()
             if new_slot:
@@ -178,13 +181,12 @@ def admin_command():
             }
             day_names[d] = heb_map.get(heb_day, heb_day)
         except Exception as e:
-            day_names[d] = d  # אם יש בעיה בתרגום
+            day_names[d] = d
 
     return render_template("admin_command.html",
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
                            day_names=day_names)
-
 
 # --- API JSON ---
 
