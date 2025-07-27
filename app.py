@@ -148,14 +148,13 @@ def admin_command():
 
         return redirect("/admin_command")
 
-    import datetime
     return render_template("admin_command.html",
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
                            services_prices=services_prices,
                            custom_knowledge=custom_knowledge,
                            disabled_days=disabled_days,
-                           datetime=datetime)
+                           datetime_obj=datetime)
 
 
 # --- API JSON ---
