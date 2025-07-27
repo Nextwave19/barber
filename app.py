@@ -17,6 +17,9 @@ def save_json(filename, data):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+def hebrew_day_name(date_obj):
+    days = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון']
+    return days[date_obj.weekday()]
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or "default_secret_key"
@@ -91,16 +94,28 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
+    # טען את כל הקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
     disabled_days = load_json("disabled_days.json")
     services_prices = load_json("services_prices.json")
     custom_knowledge = load_json("custom_knowledge.json")
 
+    def format_date_key(date_str):
+        """ מקבל תאריך במבנה 28/07 ומחזיר 'ראשון - 28/07' """
+        try:
+            date_obj = datetime.strptime(date_str, "%d/%m")
+            return f"{hebrew_day_name(date_obj)} - {date_str}"
+        except:
+            return date_str  # אם קלט לא תקין, תחזיר כמו שהוא
+
     if request.method == "POST":
         action = request.form.get("action")
-        date = request.form.get("date")
+        raw_date = request.form.get("date")  # תמיד נקבל תאריך קצר מ-html
         hour = request.form.get("hour")
+
+        # נהפוך אותו למפתח תקני: "ראשון - 28/07"
+        date = format_date_key(raw_date)
 
         if action == "disable_slot":
             if date not in disabled_slots:
@@ -155,8 +170,6 @@ def admin_command():
                            custom_knowledge=custom_knowledge,
                            disabled_days=disabled_days,
                            datetime_obj=datetime)
-
-
 # --- API JSON ---
 
 @app.route("/availability")
