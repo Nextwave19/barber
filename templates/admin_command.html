@@ -188,8 +188,8 @@
     {% set days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'] %}
 
     {% for date, times in free_slots.items() %}
-        {% set weekday_index = loop.index0 %}
-        {% set weekday = days[loop.index0 % 7] %}
+    {% set weekday = day_names[date] %}
+
 
         <div style="margin-bottom: 8px;">
             <strong>{{ weekday }}</strong>
