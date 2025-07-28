@@ -77,8 +77,7 @@ def index():
 def login():
     error = None
     admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
-
+    admin_password = os.environ.get('ADMIN_PASSWORD') 
     if request.method == 'POST':
         username = request.form['username'].strip()
         password = request.form.get('password', '')
