@@ -113,7 +113,7 @@ def admin_command():
         return redirect("/login")
 
     # טען את כל הקבצים עם עדכון תאריכים
-    free_slots = update_free_slots_daily()
+    free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
     disabled_days = load_json("disabled_days.json")
     services_prices = load_json("services_prices.json")
