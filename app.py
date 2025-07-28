@@ -58,19 +58,8 @@ def init_free_slots():
         free_slots[date_str] = times.copy()
     return free_slots
 
-# יטען פעם ראשונה או יאתחל קבצים אם לא קיימים
-if not os.path.exists("free_slots.json"):
-    free_slots = init_free_slots()
-    save_json("free_slots.json", free_slots)
-else:
-    free_slots = load_json("free_slots.json")
-
-if not os.path.exists("disabled_slots.json"):
-    disabled_slots = {}
-    save_json("disabled_slots.json", disabled_slots)
-else:
-    disabled_slots = load_json("disabled_slots.json")
-
+free_slots = init_free_slots()
+disabled_slots = defaultdict(list)
 chat_history = []
 custom_knowledge = []
 
@@ -117,7 +106,6 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
-    global free_slots, disabled_slots
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
 
@@ -186,15 +174,10 @@ def admin_command():
 
 @app.route("/availability")
 def availability():
-    global free_slots
-    free_slots = load_json("free_slots.json")
     return jsonify(free_slots)
 
 @app.route("/book", methods=["POST"])
 def book():
-    global free_slots
-    free_slots = load_json("free_slots.json")
-
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -213,7 +196,6 @@ def book():
         return jsonify({"error": "Unknown service."}), 400
 
     free_slots[date].remove(time)
-    save_json("free_slots.json", free_slots)
 
     try:
         send_email(name, phone, date, time, service, price)
@@ -226,9 +208,6 @@ def book():
 def update_slot():
     if not session.get("is_admin"):
         return redirect("/login")
-
-    global free_slots
-    free_slots = load_json("free_slots.json")
 
     date = request.form.get("date")
     time = request.form.get("time")
@@ -266,7 +245,6 @@ def update_slot():
                 free_slots[date].append(new_time)
                 free_slots[date].sort()
 
-    save_json("free_slots.json", free_slots)
     return redirect("/admin_command")
 
 @app.route("/bot-knowledge", methods=["POST"])
@@ -286,9 +264,6 @@ def admin_update_slot():
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
 
-    global free_slots
-    free_slots = load_json("free_slots.json")
-
     data = request.get_json()
     date = data.get("date")
     time = data.get("time")
@@ -301,27 +276,23 @@ def admin_update_slot():
     if action == "disable":
         if time in free_slots[date]:
             free_slots[date].remove(time)
-        save_json("free_slots.json", free_slots)
         return jsonify({"status": "disabled"})
 
     elif action == "enable":
         if time not in free_slots[date]:
             free_slots[date].append(time)
             free_slots[date].sort()
-        save_json("free_slots.json", free_slots)
         return jsonify({"status": "enabled"})
 
     elif action == "delete":
         if time in free_slots[date]:
             free_slots[date].remove(time)
-        save_json("free_slots.json", free_slots)
         return jsonify({"status": "deleted"})
 
     elif action == "add":
         if time not in free_slots[date]:
             free_slots[date].append(time)
             free_slots[date].sort()
-        save_json("free_slots.json", free_slots)
         return jsonify({"status": "added"})
 
     elif action == "edit":
@@ -330,7 +301,6 @@ def admin_update_slot():
             if new_time not in free_slots[date]:
                 free_slots[date].append(new_time)
                 free_slots[date].sort()
-            save_json("free_slots.json", free_slots)
             return jsonify({"status": "edited", "new_time": new_time})
 
     return jsonify({"error": "Invalid action"}), 400
@@ -410,3 +380,5 @@ Price: {price}₪
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
+
+
