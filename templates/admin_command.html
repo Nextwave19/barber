@@ -10,9 +10,11 @@
             padding: 20px;
             margin: 0;
         }
+
         h1, h2, h3 {
             color: #2c3e50;
         }
+
         .section {
             background: #ffffff;
             padding: 25px;
@@ -20,131 +22,87 @@
             margin-bottom: 30px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
+
         .slots-container {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 10px;
         }
-        .slot-button {
-            position: relative;
-            padding: 10px 30px 10px 10px;
-            border-radius: 10px;
-            background-color: #2ecc71;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
+
+        form.inline {
+            display: inline-block;
+            margin: 5px 0;
         }
-        .slot-button.disabled {
-            background-color: #95a5a6;
-        }
-        .slot-button.open .actions {
-            display: flex;
-        }
-        .actions {
-            display: none;
-            flex-direction: column;
-            gap: 5px;
-            margin-top: 6px;
-        }
-        .actions form {
-            margin: 0;
-        }
-        .actions button {
-            background: #f0f0f0;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 12px;
-            cursor: pointer;
-        }
-        .actions input[type="text"] {
-            padding: 4px;
-            font-size: 12px;
-            width: 90px;
-        }
-        .actions button:hover {
-            background: #e0e0e0;
-        }
-        .remove-x {
-            position: absolute;
-            top: 4px;
-            right: 6px;
-            background: transparent;
-            border: none;
-            color: red;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 2;
-        }
-        .remove-x:hover {
-            color: #ff4d4d;
-        }
-        button.add {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 6px 12px;
+
+        button {
+            padding: 8px 14px;
+            font-size: 0.9em;
             border-radius: 8px;
+            border: none;
             cursor: pointer;
+            transition: background 0.2s;
         }
-        button.add:hover {
-            background: #2980b9;
-        }
+
         button.remove {
             background: #e74c3c;
             color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
         }
+
         button.remove:hover {
             background: #c0392b;
         }
-        label {
-            margin-left: 8px;
-            font-weight: bold;
-            color: #555;
+
+        button.add {
+            background: #3498db;
+            color: white;
         }
-        input[type="text"] {
+
+        button.add:hover {
+            background: #2980b9;
+        }
+
+        button.logout {
+            background: #bdc3c7;
+            color: black;
+            float: left;
+        }
+
+        input[type="text"], select {
             padding: 8px;
             border-radius: 6px;
             border: 1px solid #ccc;
             font-size: 14px;
         }
+
+        label {
+            margin-left: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+
         ul {
             list-style: square;
             padding-right: 20px;
         }
+
         ul li {
             margin-bottom: 6px;
             color: #333;
         }
+
         hr {
             margin: 20px 0;
             border: 0;
             height: 1px;
             background: #ddd;
         }
+
         .header-container {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 25px;
-        }
-        .back-button {
-            background: #bdc3c7;
-            color: black;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        .back-button:hover {
-            background: #95a5a6;
         }
     </style>
 </head>
@@ -152,8 +110,8 @@
 
 <div class="header-container">
     <h1>ברוך הבא, {{ session['username'] }} (מנהל)</h1>
-    <form action="/" method="get">
-        <button class="back-button">חזור להזמנות</button>
+    <form method="GET" action="/logout">
+        <button class="logout">התנתק</button>
     </form>
 </div>
 
@@ -161,64 +119,34 @@
     <h2>ניהול תורים לפי יום</h2>
 
     {% for date, times in free_slots.items() %}
-        {% set day_name, date_part = date.split(' - ') %}
-        <div class="day-section">
-            <strong>{{ day_name }} ({{ date_part }})</strong>
-            <input type="hidden" name="date" value="{{ date }}">
-
-            {% if date in disabled_days %}
-                <form method="POST" action="/slot" class="inline">
-                    <input type="hidden" name="date" value="{{ date }}">
-                    <input type="hidden" name="action" value="enable_day">
-                    <button class="add">הפעל את היום</button>
-                </form>
-            {% else %}
-                <form method="POST" action="/slot" class="inline">
-                    <input type="hidden" name="date" value="{{ date }}">
-                    <input type="hidden" name="action" value="disable_day">
-                    <button class="remove">השבת את היום</button>
-                </form>
-            {% endif %}
-        </div>
-
-        {% if date not in disabled_days %}
-            <div class="slots-container">
-                {% for time in times %}
-                    <div class="slot-button {% if time in disabled_slots[date] %}disabled{% endif %}" onclick="toggleActions(this)">
-                        {{ time }}
-                        <form method="POST" action="/slot" style="display:inline;">
-                            <input type="hidden" name="date" value="{{ date }}">
-                            <input type="hidden" name="time" value="{{ time }}">
-                            <input type="hidden" name="action" value="remove">
-                            <button class="remove-x" type="submit">&times;</button>
-                        </form>
-                        <div class="actions">
-                            <form method="POST" action="/slot">
-                                <input type="hidden" name="date" value="{{ date }}">
-                                <input type="hidden" name="time" value="{{ time }}">
-                                <input type="hidden" name="action" value="toggle">
-                                <button type="submit">{% if time in disabled_slots[date] %}הפעל{% else %}כבה{% endif %}</button>
-                            </form>
-                            <form method="POST" action="/slot">
-                                <input type="hidden" name="date" value="{{ date }}">
-                                <input type="hidden" name="time" value="{{ time }}">
-                                <input type="hidden" name="action" value="edit">
-                                <input type="text" name="new_time" placeholder="שנה ל..." required>
-                                <button type="submit">ערוך</button>
-                            </form>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-
+        <div style="margin-bottom: 8px;">
+            <strong>{{ date }}</strong>
             <form method="POST" action="/slot" class="inline">
                 <input type="hidden" name="date" value="{{ date }}">
-                <label>הוסף שעה:</label>
-                <input type="text" name="time" placeholder="למשל 16:30" required>
-                <input type="hidden" name="action" value="add">
-                <button class="add">הוסף שעה</button>
+                <input type="hidden" name="time" value="*">
+                <input type="hidden" name="action" value="remove">
+                <button class="remove">ביטול כל התורים ליום זה</button>
             </form>
-        {% endif %}
+        </div>
+
+        <div class="slots-container">
+            {% for time in times %}
+                <form method="POST" action="/slot" class="inline">
+                    <input type="hidden" name="date" value="{{ date }}">
+                    <input type="hidden" name="time" value="{{ time }}">
+                    <input type="hidden" name="action" value="remove">
+                    <button class="remove">{{ time }} ✖</button>
+                </form>
+            {% endfor %}
+        </div>
+
+        <form method="POST" action="/slot" class="inline">
+            <input type="hidden" name="date" value="{{ date }}">
+            <label>הוסף שעה:</label>
+            <input type="text" name="time" placeholder="למשל 16:30" required>
+            <input type="hidden" name="action" value="add">
+            <button class="add">הוסף שעה</button>
+        </form>
         <hr>
     {% endfor %}
 </div>
@@ -249,12 +177,6 @@
         {% endfor %}
     </ul>
 </div>
-
-<script>
-    function toggleActions(element) {
-        element.classList.toggle('open');
-    }
-</script>
 
 </body>
 </html>
