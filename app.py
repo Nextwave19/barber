@@ -40,8 +40,15 @@ def init_free_slots():
         free_slots[date_str] = times.copy()
     return free_slots
 
-free_slots = init_free_slots()
-disabled_slots = defaultdict(list)
+# טעינת זמינות מתעדכנת מקובץ, או התחלה חדשה אם אין קובץ
+free_slots = load_json("free_slots.json")
+if not free_slots:
+    free_slots = init_free_slots()
+
+disabled_slots = load_json("disabled_slots.json")
+if not disabled_slots:
+    disabled_slots = defaultdict(list)
+
 chat_history = []
 custom_knowledge = []
 
@@ -50,7 +57,7 @@ custom_knowledge = []
 @app.route("/")
 def index():
     return render_template("index.html")
-    
+
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -92,6 +99,7 @@ def admin_command():
         return redirect("/login")
 
     # טען את המידע מהקבצים
+    global free_slots, disabled_slots
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
 
@@ -143,11 +151,11 @@ def admin_command():
                         disabled_slots[day].append(t)
                 save_json("disabled_slots.json", disabled_slots)
 
-    # תרגום ימים לעברית (שים לב לשנות בהתאם לתאריכים האמיתיים שלך)
+    # תרגום ימים לעברית
     day_names = {}
     for d in sorted(set(list(free_slots.keys()) + list(disabled_slots.keys()))):
         try:
-            heb_day = datetime.strptime(d, "%Y-%m-%d").strftime("%A")
+            heb_day = datetime.strptime(d, "%d/%m").strftime("%A")
             heb_map = {
                 "Sunday": "ראשון",
                 "Monday": "שני",
@@ -159,7 +167,7 @@ def admin_command():
             }
             day_names[d] = heb_map.get(heb_day, heb_day)
         except:
-            day_names[d] = d  # אם יש בעיה, פשוט שים את התאריך
+            day_names[d] = d
 
     return render_template("admin_command.html",
                            free_slots=free_slots,
@@ -175,6 +183,7 @@ def availability():
 
 @app.route("/book", methods=["POST"])
 def book():
+    global free_slots
     data = request.get_json()
     name = data.get("name")
     phone = data.get("phone")
@@ -193,6 +202,7 @@ def book():
         return jsonify({"error": "Unknown service."}), 400
 
     free_slots[date].remove(time)
+    save_json("free_slots.json", free_slots)
 
     try:
         send_email(name, phone, date, time, service, price)
@@ -203,6 +213,7 @@ def book():
 
 @app.route("/slot", methods=["POST"])
 def update_slot():
+    global free_slots
     if not session.get("is_admin"):
         return redirect("/login")
 
@@ -242,6 +253,7 @@ def update_slot():
                 free_slots[date].append(new_time)
                 free_slots[date].sort()
 
+    save_json("free_slots.json", free_slots)
     return redirect("/admin_command")
 
 @app.route("/bot-knowledge", methods=["POST"])
@@ -258,6 +270,7 @@ def update_bot_knowledge():
 
 @app.route("/admin/update_slot", methods=["POST"])
 def admin_update_slot():
+    global free_slots
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
 
@@ -273,23 +286,27 @@ def admin_update_slot():
     if action == "disable":
         if time in free_slots[date]:
             free_slots[date].remove(time)
+        save_json("free_slots.json", free_slots)
         return jsonify({"status": "disabled"})
 
     elif action == "enable":
         if time not in free_slots[date]:
             free_slots[date].append(time)
             free_slots[date].sort()
+        save_json("free_slots.json", free_slots)
         return jsonify({"status": "enabled"})
 
     elif action == "delete":
         if time in free_slots[date]:
             free_slots[date].remove(time)
+        save_json("free_slots.json", free_slots)
         return jsonify({"status": "deleted"})
 
     elif action == "add":
         if time not in free_slots[date]:
             free_slots[date].append(time)
             free_slots[date].sort()
+        save_json("free_slots.json", free_slots)
         return jsonify({"status": "added"})
 
     elif action == "edit":
@@ -298,6 +315,7 @@ def admin_update_slot():
             if new_time not in free_slots[date]:
                 free_slots[date].append(new_time)
                 free_slots[date].sort()
+            save_json("free_slots.json", free_slots)
             return jsonify({"status": "edited", "new_time": new_time})
 
     return jsonify({"error": "Invalid action"}), 400
