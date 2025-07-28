@@ -17,11 +17,30 @@ def save_json(filename, data):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+def normalize_date(date_str):
+    try:
+        if "-" in date_str:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+        else:
+            dt = datetime.strptime(date_str, "%d/%m")
+        day_name_hebrew = {
+            "Sunday": "ראשון",
+            "Monday": "שני",
+            "Tuesday": "שלישי",
+            "Wednesday": "רביעי",
+            "Thursday": "חמישי",
+            "Friday": "שישי",
+            "Saturday": "שבת"
+        }
+        day_he = day_name_hebrew.get(dt.strftime("%A"), dt.strftime("%A"))
+        formatted = dt.strftime("%d/%m")
+        return formatted, day_he
+    except:
+        return date_str, ""
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or "default_secret_key"
 
-# שירותים ומחירים
 services_prices = {
     "Men's Haircut": 80,
     "Women's Haircut": 120,
@@ -29,7 +48,6 @@ services_prices = {
     "Color": 250
 }
 
-# אתחול תאריכים זמינים
 def init_free_slots():
     today = datetime.today()
     times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -45,12 +63,10 @@ disabled_slots = defaultdict(list)
 chat_history = []
 custom_knowledge = []
 
-# --- דפי HTML ---
-
 @app.route("/")
 def index():
     return render_template("index.html")
-    
+
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -74,7 +90,6 @@ def login():
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
 
-        # משתמש רגיל - אין צורך בסיסמה
         session['username'] = username
         session['is_admin'] = False
         return redirect('/')
@@ -91,7 +106,6 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
-    # טען את המידע מהקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
 
@@ -143,21 +157,11 @@ def admin_command():
                         disabled_slots[day].append(t)
                 save_json("disabled_slots.json", disabled_slots)
 
-    # תרגום ימים לעברית
     day_names = {}
     for d in sorted(set(list(free_slots.keys()) + list(disabled_slots.keys()))):
         try:
-            heb_day = datetime.strptime(d, "%d/%m").strftime("%A")
-            heb_map = {
-                "Sunday": "ראשון",
-                "Monday": "שני",
-                "Tuesday": "שלישי",
-                "Wednesday": "רביעי",
-                "Thursday": "חמישי",
-                "Friday": "שישי",
-                "Saturday": "שבת"
-            }
-            day_names[d] = heb_map.get(heb_day, heb_day)
+            formatted, heb_day = normalize_date(d)
+            day_names[formatted] = heb_day
         except:
             day_names[d] = d
 
@@ -165,7 +169,6 @@ def admin_command():
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
                            day_names=day_names)
-
 
 # --- API JSON ---
 
