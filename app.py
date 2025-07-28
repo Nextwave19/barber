@@ -35,12 +35,21 @@ services_prices = {
 # אתחול תאריכים זמינים
 def init_free_slots():
     today = datetime.today()
-    times = ["09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-             "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00"]
     free_slots = {}
+
+    # שעות קבועות לכל יום, כולל שבת
+    times = ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
+             "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
+             "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
+             "17:00", "17:30", "18:00", "18:30", "19:00", "19:30"]
+
     for i in range(7):
-        date_str = (today + timedelta(days=i)).strftime("%d/%m")
-        free_slots[date_str] = times.copy()
+        date_obj = today + timedelta(days=i)
+        day_name = hebrew_day_name(date_obj)
+        date_str = date_obj.strftime("%d/%m")
+        key = f"{day_name} - {date_str}"
+        free_slots[key] = times.copy()
+
     return free_slots
 
 # בדיקת עדכון תאריכים אוטומטי
