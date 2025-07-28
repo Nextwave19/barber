@@ -17,9 +17,6 @@ def save_json(filename, data):
     with open(filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-def hebrew_day_name(date_obj):
-    days = ['שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת', 'ראשון']
-    return days[date_obj.weekday()]
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or "default_secret_key"
@@ -94,82 +91,82 @@ def admin_command():
     if 'username' not in session or session['username'] != os.environ.get("ADMIN_USERNAME"):
         return redirect("/login")
 
-    # טען את כל הקבצים
+    # טען את המידע מהקבצים
     free_slots = load_json("free_slots.json")
     disabled_slots = load_json("disabled_slots.json")
-    disabled_days = load_json("disabled_days.json")
-    services_prices = load_json("services_prices.json")
-    custom_knowledge = load_json("custom_knowledge.json")
-
-    def format_date_key(date_str):
-        """ מקבל תאריך במבנה 28/07 ומחזיר 'ראשון - 28/07' """
-        try:
-            date_obj = datetime.strptime(date_str, "%d/%m")
-            return f"{hebrew_day_name(date_obj)} - {date_str}"
-        except:
-            return date_str  # אם קלט לא תקין, תחזיר כמו שהוא
 
     if request.method == "POST":
         action = request.form.get("action")
-        raw_date = request.form.get("date")  # תמיד נקבל תאריך קצר מ-html
-        hour = request.form.get("hour")
+        date = request.form.get("date", "").strip()
+        time = request.form.get("time", "").strip()
+        day = request.form.get("day", "").strip()
+        new_time = request.form.get("new_time", "").strip()
 
-        # נהפוך אותו למפתח תקני: "ראשון - 28/07"
-        date = format_date_key(raw_date)
-
-        if action == "disable_slot":
-            if date not in disabled_slots:
-                disabled_slots[date] = []
-            if hour not in disabled_slots[date]:
-                disabled_slots[date].append(hour)
-            save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "enable_slot":
-            if date in disabled_slots and hour in disabled_slots[date]:
-                disabled_slots[date].remove(hour)
-                if not disabled_slots[date]:
-                    del disabled_slots[date]
-                save_json("disabled_slots.json", disabled_slots)
-
-        elif action == "delete_slot":
-            if date in free_slots and hour in free_slots[date]:
-                free_slots[date].remove(hour)
+        if action == "delete":
+            if date in free_slots and time in free_slots[date]:
+                free_slots[date].remove(time)
                 if not free_slots[date]:
                     del free_slots[date]
                 save_json("free_slots.json", free_slots)
-            if date in disabled_slots and hour in disabled_slots[date]:
-                disabled_slots[date].remove(hour)
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
                 if not disabled_slots[date]:
                     del disabled_slots[date]
                 save_json("disabled_slots.json", disabled_slots)
 
-        elif action == "add_slot":
-            if date not in free_slots:
-                free_slots[date] = []
-            if hour not in free_slots[date]:
-                free_slots[date].append(hour)
-                free_slots[date].sort()
-            save_json("free_slots.json", free_slots)
+        elif action == "disable":
+            if date in free_slots and time in free_slots[date]:
+                if date not in disabled_slots:
+                    disabled_slots[date] = []
+                if time not in disabled_slots[date]:
+                    disabled_slots[date].append(time)
+                    save_json("disabled_slots.json", disabled_slots)
 
-        elif action == "disable_day":
-            if date not in disabled_days:
-                disabled_days.append(date)
-                save_json("disabled_days.json", disabled_days)
+        elif action == "edit" and new_time:
+            if date in free_slots and time in free_slots[date]:
+                free_slots[date].remove(time)
+                free_slots[date].append(new_time)
+                free_slots[date] = sorted(list(set(free_slots[date])))
+                save_json("free_slots.json", free_slots)
+            if date in disabled_slots and time in disabled_slots[date]:
+                disabled_slots[date].remove(time)
+                disabled_slots[date].append(new_time)
+                disabled_slots[date] = sorted(list(set(disabled_slots[date])))
+                save_json("disabled_slots.json", disabled_slots)
 
-        elif action == "enable_day":
-            if date in disabled_days:
-                disabled_days.remove(date)
-                save_json("disabled_days.json", disabled_days)
+        elif action == "disable_day" and day:
+            if day in free_slots:
+                if day not in disabled_slots:
+                    disabled_slots[day] = []
+                for t in free_slots[day]:
+                    if t not in disabled_slots[day]:
+                        disabled_slots[day].append(t)
+                save_json("disabled_slots.json", disabled_slots)
 
-        return redirect("/admin_command")
+    # תרגום ימים לעברית (שים לב לשנות בהתאם לתאריכים האמיתיים שלך)
+    day_names = {}
+    for d in sorted(set(list(free_slots.keys()) + list(disabled_slots.keys()))):
+        try:
+            heb_day = datetime.strptime(d, "%Y-%m-%d").strftime("%A")
+            heb_map = {
+                "Sunday": "ראשון",
+                "Monday": "שני",
+                "Tuesday": "שלישי",
+                "Wednesday": "רביעי",
+                "Thursday": "חמישי",
+                "Friday": "שישי",
+                "Saturday": "שבת"
+            }
+            day_names[d] = heb_map.get(heb_day, heb_day)
+        except:
+            day_names[d] = d  # אם יש בעיה, פשוט שים את התאריך
 
     return render_template("admin_command.html",
                            free_slots=free_slots,
                            disabled_slots=disabled_slots,
-                           services_prices=services_prices,
-                           custom_knowledge=custom_knowledge,
-                           disabled_days=disabled_days,
-                           datetime_obj=datetime)
+                           day_names=day_names)
+
+
 # --- API JSON ---
 
 @app.route("/availability")
@@ -380,3 +377,4 @@ Price: {price}₪
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 3000))
     app.run(host="0.0.0.0", port=port)
+
