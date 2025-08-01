@@ -179,10 +179,10 @@ def admin_routine():
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-   
-    return render_template("admin_routine.html",
-                           weekly_schedule=weekly_schedule,
-                           default_times=default_times)
+
+    return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
+
+                          
 @app.route("/admin_overrides")
 def admin_overrides():
     if not session.get("is_admin"):
