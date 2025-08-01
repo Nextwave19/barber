@@ -13,6 +13,7 @@ WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
+ONE_TIME_FILE = "one_time_changes.json"   # <-- הוסף את זה
 
 # שירותים ומחירים
 services_prices = {
@@ -50,6 +51,13 @@ def load_appointments():
 def save_appointments(data):
     save_json(APPOINTMENTS_FILE, data)
 
+# פונקציות ל-one-time changes:
+def load_one_time_changes():
+    return load_json(ONE_TIME_FILE)
+
+def save_one_time_changes(data):
+    save_json(ONE_TIME_FILE, data)
+
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
 def generate_week_slots():
@@ -76,7 +84,8 @@ def generate_week_slots():
         if remove_times == ["__all__"]:
             all_final = []
         else:
-            all_final = sorted(set(scheduled_times + add_times + remove_times))
+            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
+            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
 
         final_times = []
         for t in all_final:
