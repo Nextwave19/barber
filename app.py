@@ -179,8 +179,7 @@ def admin_routine():
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-    default_times = generate_default_times()
-
+   
     return render_template("admin_routine.html",
                            weekly_schedule=weekly_schedule,
                            default_times=default_times)
