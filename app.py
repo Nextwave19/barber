@@ -166,6 +166,32 @@ def logout():
     return redirect("/")
 
 # --- דף ניהול ראשי ---
+@app.route("/admin_command", methods=["GET"])
+def admin_command():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
+    weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    overrides = load_json(OVERRIDES_FILE)
+    week_slots = generate_week_slots()
+    bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
+    appointments = load_appointments()
+
+    # יצירת רשימת שעות 08:00 עד 20:00 ב-30 דק'
+    default_times = []
+    current_time = datetime.strptime("08:00", "%H:%M")
+    end_time = datetime.strptime("20:00", "%H:%M")
+    while current_time <= end_time:
+        default_times.append(current_time.strftime("%H:%M"))
+        current_time += timedelta(minutes=30)
+
+    return render_template("main_admin.html",
+                           weekly_schedule=weekly_schedule,
+                           overrides=overrides,
+                           week_slots=week_slots,
+                           bot_knowledge=bot_knowledge,
+                           appointments=appointments,
+                           default_times=default_times)
 
 
 @app.route("/main_admin")
