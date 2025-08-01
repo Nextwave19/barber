@@ -13,7 +13,7 @@ WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"   # <-- הוסף את זה
+ONE_TIME_FILE = "one_time_changes.json"   
 
 # שירותים ומחירים
 services_prices = {
@@ -198,6 +198,13 @@ def admin_overrides():
                            overrides=overrides,
                            week_slots=week_slots,
                            default_times=default_times)
+
+@app.route("/admin_appointments")
+def admin_appointments():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    appointments = load_appointments()
+    return render_template("admin_appointments.html", appointments=appointments)
 
 # --- ניהול שגרה שבועית ---
 
