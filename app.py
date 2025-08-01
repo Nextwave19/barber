@@ -186,7 +186,7 @@ def admin_command():
         default_times.append(current_time.strftime("%H:%M"))
         current_time += timedelta(minutes=30)
 
-    return render_template("admin_command.html",
+    return render_template("main_admin.html",
                            weekly_schedule=weekly_schedule,
                            overrides=overrides,
                            week_slots=week_slots,
