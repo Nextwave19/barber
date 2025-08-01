@@ -173,7 +173,7 @@ def main_admin():
         return redirect("/login")
     return render_template("main_admin.html")
 
-@app.route("/routine")
+@app.route("/admin_routine")
 def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
@@ -184,7 +184,7 @@ def admin_routine():
     return render_template("admin_routine.html",
                            weekly_schedule=weekly_schedule,
                            default_times=default_times)
-@app.route("/overrides")
+@app.route("/admin_overrides")
 def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
