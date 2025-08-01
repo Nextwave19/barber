@@ -148,7 +148,7 @@ def login():
             if password == admin_password:
                 session['username'] = username
                 session['is_admin'] = True
-                return redirect('/admin_command')
+                return redirect('/main_admin')
             else:
                 error = "סיסמה שגויה"
                 return render_template('login.html', error=error, admin_user=admin_user)
@@ -167,32 +167,27 @@ def logout():
 
 # --- דף ניהול ראשי ---
 
-@app.route("/admin_command", methods=["GET"])
-def admin_command():
+@app.route("/main_admin")
+def main_admin():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return render_template("main_admin.html")
+
+@app.route("/admin/routine")
+def admin_routine():
     if not session.get("is_admin"):
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
+    return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
+
+@app.route("/admin/overrides")
+def admin_overrides():
+    if not session.get("is_admin"):
+        return redirect("/login")
+
     overrides = load_json(OVERRIDES_FILE)
-    week_slots = generate_week_slots()
-    bot_knowledge = load_text(BOT_KNOWLEDGE_FILE)
-    appointments = load_appointments()
-
-    # 🔽 הוסף את זה כאן (מתחת לכל הטעינות)
-    default_times = []
-    current_time = datetime.strptime("08:00", "%H:%M")
-    end_time = datetime.strptime("20:00", "%H:%M")
-    while current_time <= end_time:
-        default_times.append(current_time.strftime("%H:%M"))
-        current_time += timedelta(minutes=30)
-
-    return render_template("admin_command.html",
-                           weekly_schedule=weekly_schedule,
-                           overrides=overrides,
-                           week_slots=week_slots,
-                           bot_knowledge=bot_knowledge,
-                           appointments=appointments,
-                           default_times=default_times)  # 👈 אל תשכח להוסיף את זה כאן
+    return render_template("admin_overrides.html", overrides=overrides)
 
 # --- ניהול שגרה שבועית ---
 
@@ -381,7 +376,7 @@ def bot_knowledge():
     if request.method == "POST":
         content = request.form.get("content", "")
         save_text(BOT_KNOWLEDGE_FILE, content)
-        return redirect("/admin_command")
+        return redirect("/main_admin")
 
     content = load_text(BOT_KNOWLEDGE_FILE)
     return render_template("bot_knowledge.html", content=content)
