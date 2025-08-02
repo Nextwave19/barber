@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HairBoss - ניהול שינויים שגרתיים</title>
   <style>
-    /* אותו עיצוב כמו ב-admin_command */
     body {
       font-family: Arial, sans-serif;
       max-width: 1000px;
@@ -49,12 +48,11 @@
     }
     .time-wrapper {
       display: inline-block;
-      margin: 5px;
       position: relative;
-      text-align: right;
+      margin: 5px;
     }
     .time-btn {
-      padding: 5px 30px 5px 10px;
+      padding: 5px 30px 5px 10px; /* שמים מקום לאיקס מצד ימין */
       border-radius: 5px;
       background: #3498db;
       color: white;
@@ -62,39 +60,43 @@
       border: none;
       font-size: 1em;
       position: relative;
-      user-select: none;
     }
     .time-btn.disabled {
       background: #aaa;
       cursor: default;
       text-decoration: line-through;
     }
-    /* האיקס בצד ימין בתוך הכפתור */
     .time-btn .close-icon {
       position: absolute;
       right: 8px;
       top: 50%;
       transform: translateY(-50%);
+      color: white;
       font-weight: bold;
-      pointer-events: none; /* כדי שהלחיצה תגיע לכפתור עצמו */
+      cursor: pointer;
       user-select: none;
+      font-size: 1.1em;
+      padding-left: 5px;
     }
     .actions-container {
       display: none;
-      margin-top: 3px;
-      text-align: right;
+      position: absolute;
+      top: 110%;
+      left: 0;
+      background: #2980b9;
+      border-radius: 5px;
+      padding: 5px;
+      white-space: nowrap;
+      z-index: 10;
     }
     .actions-container button {
       background: transparent;
       border: none;
-      color: #2980b9;
-      cursor: pointer;
+      color: white;
       font-weight: bold;
+      cursor: pointer;
       margin-left: 10px;
       font-size: 0.9em;
-    }
-    .actions-container button:hover {
-      text-decoration: underline;
     }
     .add-time-input { margin-top: 10px; }
     input[type="time"] { padding: 4px; }
@@ -148,46 +150,57 @@
       });
       const data = await res.json();
       if (data.error) alert(data.error);
-      else location.reload();
+      return data;
     }
 
     async function addWeeklyTime(day_key) {
       const input = document.getElementById('weekly-add-' + day_key);
       const time = input.value;
       if (!time) return alert('נא לבחור שעה');
-      await updateWeeklySchedule('add', day_key, time);
+      const data = await updateWeeklySchedule('add', day_key, time);
+      if (!data.error) location.reload();
     }
 
     async function removeWeeklyTime(day_key, time) {
-      await updateWeeklySchedule('remove', day_key, time);
+      // מחיקה שקטה בלי popup ובלי רילואד
+      const data = await updateWeeklySchedule('remove', day_key, time);
+      if (!data.error) {
+        const wrapper = document.getElementById(`time-wrapper-${day_key}-${time.replace(':', '-')}`);
+        if (wrapper) wrapper.remove();
+      } else {
+        alert(data.error);
+      }
     }
 
     async function editWeeklyTime(day_key, old_time) {
-      // כאן אין popup לפי בקשה, אפשר לפתוח UI אחר או לשלוח קריאה, כרגע לא פעיל
-      alert("עריכה לא זמינה כרגע. יש לשדרג לפי צורך.");
+      // במקום popup - אפשר להוסיף ממשק עריכה בעתיד, כרגע הודעה בלבד
+      alert('עריכה לא זמינה כרגע.');
     }
 
     async function toggleWeeklyDay(day_key, enabled) {
-      await fetch('/weekly_toggle_day', {
+      const res = await fetch('/weekly_toggle_day', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ day_key, enabled })
       });
-      location.reload();
+      if (res.ok) location.reload();
+      else alert('שגיאה בעדכון יום');
     }
 
     async function toggleWeeklyTime(day_key, time, enable) {
-      await updateWeeklySchedule(enable ? 'add' : 'remove', day_key, time);
+      const data = await updateWeeklySchedule(enable ? 'add' : 'remove', day_key, time);
+      if (!data.error) location.reload();
     }
 
     function toggleActions(day_key, time) {
       const id = `actions-${day_key}-${time.replace(':','-')}`;
       const el = document.getElementById(id);
       if (!el) return;
-      const isVisible = el.style.display === 'block';
-      // להסתיר את כל האזורי פעולות אחרים לפני פתיחה
-      document.querySelectorAll('.actions-container').forEach(c => c.style.display = 'none');
-      el.style.display = isVisible ? 'none' : 'block';
+      // סוגר את כל שאר התפריטים לפני
+      document.querySelectorAll('.actions-container').forEach(c => {
+        if (c !== el) c.style.display = 'none';
+      });
+      el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
   </script>
 </head>
@@ -217,18 +230,13 @@
       </div>
       <div class="times-container" id="weekly-times-{{day_key}}">
         {% for time in weekly_schedule[day_key] %}
-          {% set enabled = time in weekly_schedule[day_key] %}
-          <div class="time-wrapper">
-            <button
-              class="time-btn {% if not enabled %}disabled{% endif %}"
-              onclick="event.stopPropagation(); toggleActions('{{day_key}}', '{{time}}')"
-              id="time-btn-{{day_key}}-{{time|replace(':','-')}}">
+          <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
+            <button class="time-btn" onclick="toggleActions('{{day_key}}', '{{time}}')">
               {{ time }}
-              <span class="close-icon">✖️</span>
+              <span class="close-icon" onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️</span>
             </button>
             <div class="actions-container" id="actions-{{day_key}}-{{time|replace(':','-')}}">
               <button onclick="event.stopPropagation(); editWeeklyTime('{{day_key}}', '{{time}}')">✏️ עריכה</button>
-              <button onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️ מחיקה</button>
             </div>
           </div>
         {% endfor %}
