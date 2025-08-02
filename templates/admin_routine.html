@@ -52,7 +52,7 @@
       margin: 5px;
     }
     .time-btn {
-      padding: 5px 30px 5px 10px; /* שמים מקום לאיקס מצד ימין */
+      padding: 5px 30px 5px 10px; /* מקום לאיקס מצד ימין */
       border-radius: 5px;
       background: #3498db;
       color: white;
@@ -60,6 +60,7 @@
       border: none;
       font-size: 1em;
       position: relative;
+      user-select: none;
     }
     .time-btn.disabled {
       background: #aaa;
@@ -97,6 +98,7 @@
       cursor: pointer;
       margin-left: 10px;
       font-size: 0.9em;
+      user-select: none;
     }
     .add-time-input { margin-top: 10px; }
     input[type="time"] { padding: 4px; }
@@ -116,6 +118,7 @@
       border-radius: 4px;
       cursor: pointer;
       font-size: 0.9em;
+      user-select: none;
     }
     button.toggle-day-btn.enabled {
       background: #27ae60;
@@ -123,15 +126,18 @@
     .top-nav {
       overflow: hidden;
       margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      justify-content: flex-start;
     }
     .top-nav a {
-      margin-left: 10px;
       text-decoration: none;
       color: #2980b9;
+      font-weight: bold;
+      user-select: none;
     }
     .logout {
-      float: left;
-      font-weight: bold;
+      margin-left: auto;
       color: red;
     }
   </style>
@@ -148,9 +154,7 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)
       });
-      const data = await res.json();
-      if (data.error) alert(data.error);
-      return data;
+      return await res.json();
     }
 
     async function addWeeklyTime(day_key) {
@@ -159,6 +163,7 @@
       if (!time) return alert('נא לבחור שעה');
       const data = await updateWeeklySchedule('add', day_key, time);
       if (!data.error) location.reload();
+      else alert(data.error);
     }
 
     async function removeWeeklyTime(day_key, time) {
@@ -172,26 +177,6 @@
       }
     }
 
-    async function editWeeklyTime(day_key, old_time) {
-      // במקום popup - אפשר להוסיף ממשק עריכה בעתיד, כרגע הודעה בלבד
-      alert('עריכה לא זמינה כרגע.');
-    }
-
-    async function toggleWeeklyDay(day_key, enabled) {
-      const res = await fetch('/weekly_toggle_day', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ day_key, enabled })
-      });
-      if (res.ok) location.reload();
-      else alert('שגיאה בעדכון יום');
-    }
-
-    async function toggleWeeklyTime(day_key, time, enable) {
-      const data = await updateWeeklySchedule(enable ? 'add' : 'remove', day_key, time);
-      if (!data.error) location.reload();
-    }
-
     function toggleActions(day_key, time) {
       const id = `actions-${day_key}-${time.replace(':','-')}`;
       const el = document.getElementById(id);
@@ -201,6 +186,56 @@
         if (c !== el) c.style.display = 'none';
       });
       el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // פונקציית עריכה פשוטה: משנה טקסט של הכפתור לשדה input, וכפתורי אישור/ביטול
+    function enableEdit(day_key, time) {
+      const wrapperId = `time-wrapper-${day_key}-${time.replace(':', '-')}`;
+      const wrapper = document.getElementById(wrapperId);
+      if (!wrapper) return;
+
+      // מוחקים את תוכן ה-wrapper
+      wrapper.innerHTML = '';
+
+      // יוצרים input type=time עם הערך המקורי
+      const input = document.createElement('input');
+      input.type = 'time';
+      input.value = time;
+      input.id = `edit-input-${day_key}-${time.replace(':', '-')}`;
+
+      // כפתור אישור
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = '✓';
+      saveBtn.style.marginLeft = '5px';
+      saveBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const newTime = input.value;
+        if (!newTime) {
+          alert('נא לבחור שעה תקינה');
+          return;
+        }
+        const data = await updateWeeklySchedule('edit', day_key, time, newTime);
+        if (!data.error) {
+          // רענן את הדף כדי להראות את השינוי
+          location.reload();
+        } else {
+          alert(data.error);
+        }
+      };
+
+      // כפתור ביטול
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = '✖';
+      cancelBtn.style.marginLeft = '5px';
+      cancelBtn.onclick = (e) => {
+        e.stopPropagation();
+        // פשוט רענון הדף כדי לשחזר את התצוגה המקורית
+        location.reload();
+      };
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(saveBtn);
+      wrapper.appendChild(cancelBtn);
     }
   </script>
 </head>
@@ -216,7 +251,7 @@
 
 <div class="section">
   <h2>שגרה שבועית</h2>
- {% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
+  {% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
   {% for day_key in ['0','1','2','3','4','5','6'] %}
     <div class="day-container">
       <div class="day-header" onclick="toggleSection('weekly-times-{{day_key}}')">
@@ -234,7 +269,7 @@
               <span class="close-icon" onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️</span>
             </button>
             <div class="actions-container" id="actions-{{day_key}}-{{time|replace(':','-')}}">
-              <button onclick="event.stopPropagation(); editWeeklyTime('{{day_key}}', '{{time}}')">✏️ עריכה</button>
+              <button onclick="event.stopPropagation(); enableEdit('{{day_key}}', '{{time}}')">✏️ עריכה</button>
             </div>
           </div>
         {% endfor %}
