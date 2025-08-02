@@ -194,7 +194,7 @@ def admin_overrides():
     return render_template("admin_overrides.html",
                            overrides=overrides,
                            week_slots=week_slots,
-                           default_times=default_times)
+                           
 
 @app.route("/appointments")
 def admin_appointments():
