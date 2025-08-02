@@ -47,37 +47,54 @@
     .times-container.active {
       display: block;
     }
-    .time-btn {
+    .time-wrapper {
       display: inline-block;
       margin: 5px;
-      padding: 5px 10px;
+      position: relative;
+      text-align: right;
+    }
+    .time-btn {
+      padding: 5px 30px 5px 10px;
       border-radius: 5px;
       background: #3498db;
       color: white;
       cursor: pointer;
+      border: none;
+      font-size: 1em;
       position: relative;
+      user-select: none;
     }
     .time-btn.disabled {
       background: #aaa;
       cursor: default;
       text-decoration: line-through;
     }
-    .time-btn .actions {
+    /* האיקס בצד ימין בתוך הכפתור */
+    .time-btn .close-icon {
       position: absolute;
-      top: 2px;
-      left: 2px;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
       font-weight: bold;
-      font-size: 0.9em;
-      display: flex;
-      gap: 5px;
+      pointer-events: none; /* כדי שהלחיצה תגיע לכפתור עצמו */
+      user-select: none;
     }
-    .time-btn .actions button {
+    .actions-container {
+      display: none;
+      margin-top: 3px;
+      text-align: right;
+    }
+    .actions-container button {
       background: transparent;
       border: none;
-      color: white;
+      color: #2980b9;
       cursor: pointer;
       font-weight: bold;
-      padding: 0 3px;
+      margin-left: 10px;
+      font-size: 0.9em;
+    }
+    .actions-container button:hover {
+      text-decoration: underline;
     }
     .add-time-input { margin-top: 10px; }
     input[type="time"] { padding: 4px; }
@@ -142,14 +159,12 @@
     }
 
     async function removeWeeklyTime(day_key, time) {
-      if (confirm(`להסיר את השעה ${time}?`))
-        await updateWeeklySchedule('remove', day_key, time);
+      await updateWeeklySchedule('remove', day_key, time);
     }
 
     async function editWeeklyTime(day_key, old_time) {
-      const new_time = prompt('הזן שעה חדשה במקום: ' + old_time);
-      if (new_time)
-        await updateWeeklySchedule('edit', day_key, old_time, new_time);
+      // כאן אין popup לפי בקשה, אפשר לפתוח UI אחר או לשלוח קריאה, כרגע לא פעיל
+      alert("עריכה לא זמינה כרגע. יש לשדרג לפי צורך.");
     }
 
     async function toggleWeeklyDay(day_key, enabled) {
@@ -163,6 +178,16 @@
 
     async function toggleWeeklyTime(day_key, time, enable) {
       await updateWeeklySchedule(enable ? 'add' : 'remove', day_key, time);
+    }
+
+    function toggleActions(day_key, time) {
+      const id = `actions-${day_key}-${time.replace(':','-')}`;
+      const el = document.getElementById(id);
+      if (!el) return;
+      const isVisible = el.style.display === 'block';
+      // להסתיר את כל האזורי פעולות אחרים לפני פתיחה
+      document.querySelectorAll('.actions-container').forEach(c => c.style.display = 'none');
+      el.style.display = isVisible ? 'none' : 'block';
     }
   </script>
 </head>
@@ -193,14 +218,19 @@
       <div class="times-container" id="weekly-times-{{day_key}}">
         {% for time in weekly_schedule[day_key] %}
           {% set enabled = time in weekly_schedule[day_key] %}
-          <button class="time-btn {% if not enabled %}disabled{% endif %}"
-            onclick="event.stopPropagation(); toggleWeeklyTime('{{day_key}}', '{{time}}', {{ 'true' if not enabled else 'false' }})">
-            {{ time }}
-            <span class="actions">
-              <button onclick="event.stopPropagation(); editWeeklyTime('{{day_key}}', '{{time}}')">✏️</button>
-              <button onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️</button>
-            </span>
-          </button>
+          <div class="time-wrapper">
+            <button
+              class="time-btn {% if not enabled %}disabled{% endif %}"
+              onclick="event.stopPropagation(); toggleActions('{{day_key}}', '{{time}}')"
+              id="time-btn-{{day_key}}-{{time|replace(':','-')}}">
+              {{ time }}
+              <span class="close-icon">✖️</span>
+            </button>
+            <div class="actions-container" id="actions-{{day_key}}-{{time|replace(':','-')}}">
+              <button onclick="event.stopPropagation(); editWeeklyTime('{{day_key}}', '{{time}}')">✏️ עריכה</button>
+              <button onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️ מחיקה</button>
+            </div>
+          </div>
         {% endfor %}
         <div class="add-time-input">
           <input type="time" id="weekly-add-{{day_key}}">
