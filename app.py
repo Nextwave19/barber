@@ -190,7 +190,6 @@ def admin_overrides():
 
     overrides = load_json(OVERRIDES_FILE)
     week_slots = generate_week_slots()
-    default_times = generate_default_times()
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
