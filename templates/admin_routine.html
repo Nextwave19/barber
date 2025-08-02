@@ -191,7 +191,7 @@
         </button>
       </div>
       <div class="times-container" id="weekly-times-{{day_key}}">
-        {% for time in default_times %}
+        {% for time in weekly_schedule[day_key] %}
           {% set enabled = time in weekly_schedule[day_key] %}
           <button class="time-btn {% if not enabled %}disabled{% endif %}"
             onclick="event.stopPropagation(); toggleWeeklyTime('{{day_key}}', '{{time}}', {{ 'true' if not enabled else 'false' }})">
