@@ -251,16 +251,27 @@
 
 <div class="section">
   <h2>שגרה שבועית</h2>
-{% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
-  {% for day_key in ['0','1','2','3','4','5','6'] %}
+
+  {% set day_map = {
+    '6': "ראשון",
+    '0': "שני",
+    '1': "שלישי",
+    '2': "רביעי",
+    '3': "חמישי",
+    '4': "שישי",
+    '5': "שבת"
+  } %}
+
+  {% for day_key in ['6','0','1','2','3','4','5'] %}
     <div class="day-container">
       <div class="day-header" onclick="toggleSection('weekly-times-{{day_key}}')">
-        <span>{{ day_names[day_key|int] }}</span>
+        <span>{{ day_map[day_key] }}</span>
         <button class="toggle-day-btn {% if weekly_schedule[day_key]|length > 0 %}enabled{% endif %}"
           onclick="event.stopPropagation(); toggleWeeklyDay('{{day_key}}', {{ 'false' if weekly_schedule[day_key]|length > 0 else 'true' }})">
           {% if weekly_schedule[day_key]|length > 0 %}כבה יום{% else %}הפעל יום{% endif %}
         </button>
       </div>
+
       <div class="times-container" id="weekly-times-{{day_key}}">
         {% for time in weekly_schedule[day_key] %}
           <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
@@ -273,6 +284,7 @@
             </div>
           </div>
         {% endfor %}
+
         <div class="add-time-input">
           <input type="time" id="weekly-add-{{day_key}}">
           <button class="add-btn" onclick="addWeeklyTime('{{day_key}}')">➕ הוסף שעה</button>
