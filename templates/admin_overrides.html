@@ -119,6 +119,7 @@
       cursor: pointer;
       font-size: 0.9em;
       user-select: none;
+      min-width: 90px;
     }
     button.toggle-day-btn.enabled {
       background: #27ae60;
@@ -147,6 +148,13 @@
     }
   </style>
   <script>
+    // מאזין ללחיצה מחוץ לתפריטי הפעולות כדי לסגור אותם
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.time-wrapper')) {
+        document.querySelectorAll('.actions-container').forEach(c => c.style.display = 'none');
+      }
+    });
+
     function toggleSection(id) {
       document.getElementById(id).classList.toggle('active');
     }
@@ -243,6 +251,19 @@
       if (!data.error) location.reload();
       else alert(data.error);
     }
+
+    // כפתור הפעלה/כיבוי יום
+    async function toggleDayEnabled(day_key, currentEnabled) {
+      // שלח בקשה לשרת להחליף מצב יום
+      const res = await fetch('/overrides_toggle_day', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({day_key, enable: !currentEnabled})
+      });
+      const data = await res.json();
+      if (!data.error) location.reload();
+      else alert(data.error);
+    }
   </script>
 </head>
 <body>
@@ -258,14 +279,32 @@
 
 <div class="section">
   <h2>שינויים חד-פעמיים (Overrides)</h2>
+
   {% set day_names = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"] %}
+  {% set day_dates = {
+    '6': "2025-08-03",
+    '0': "2025-08-04",
+    '1': "2025-08-05",
+    '2': "2025-08-06",
+    '3': "2025-08-07",
+    '4': "2025-08-08",
+    '5': "2025-08-09"
+  } %}
+  {% set day_enabled = day_enabled if day_enabled is defined else {} %}
+
   {% for day_key in ['6','0','1','2','3','4','5'] %}
     <div class="day-container">
       <div class="day-header" onclick="toggleSection('override-times-{{day_key}}')">
-        <span>{{ day_names[day_key|int] }}</span>
+        <span>{{ day_names[day_key|int] }} - {{ day_dates[day_key] }}</span>
+        <button
+          class="toggle-day-btn {% if day_enabled.get(day_key) %}enabled{% endif %}"
+          onclick="event.stopPropagation(); toggleDayEnabled('{{day_key}}', {{ 'true' if day_enabled.get(day_key) else 'false' }})"
+          >
+          {% if day_enabled.get(day_key) %}כבה יום{% else %}הפעל יום{% endif %}
+        </button>
       </div>
       <div class="times-container" id="override-times-{{day_key}}">
-        {% if overrides[day_key] is defined %}
+        {% if overrides.get(day_key) and overrides[day_key]|length > 0 %}
           {% for time in overrides[day_key] %}
             <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
               <button class="time-btn" onclick="toggleActions('{{day_key}}', '{{time}}')">
