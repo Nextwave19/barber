@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HairBoss - ניהול שינויים שגרתיים</title>
+  <title>HairBoss - ניהול שינויים חד פעמיים</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,20 +22,20 @@
       box-shadow: 0 0 10px #ccc;
       margin-bottom: 30px;
     }
-    .day-container {
+    .date-container {
       border: 1px solid #ccc;
       border-radius: 6px;
       margin-bottom: 10px;
       padding: 10px;
     }
-    .day-header {
+    .date-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
       user-select: none;
     }
-    .day-header span {
+    .date-header span {
       font-weight: bold;
       font-size: 1.1em;
     }
@@ -101,7 +101,7 @@
       user-select: none;
     }
     .add-time-input { margin-top: 10px; }
-    input[type="time"] { padding: 4px; }
+    input[type="time"], input[type="date"] { padding: 4px; }
     button.add-btn {
       background: #2ecc71;
       color: white;
@@ -110,7 +110,7 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    button.toggle-day-btn {
+    button.toggle-date-btn {
       background: #e67e22;
       color: white;
       border: none;
@@ -120,7 +120,7 @@
       font-size: 0.9em;
       user-select: none;
     }
-    button.toggle-day-btn.enabled {
+    button.toggle-date-btn.enabled {
       background: #27ae60;
     }
     .top-nav {
@@ -142,14 +142,22 @@
     }
   </style>
   <script>
+    // מפה להמרת תאריך ליום בעברית (לדוגמה)
+    function getHebrewDayName(dateStr) {
+      const days = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
+      const d = new Date(dateStr);
+      if (isNaN(d)) return "";
+      return days[d.getDay()];
+    }
+
     function toggleSection(id) {
       document.getElementById(id).classList.toggle('active');
     }
 
-    async function updateWeeklySchedule(action, day_key, time, new_time = null) {
-      const body = { action, day_key, time };
+    async function updateSingleChanges(action, date, time, new_time = null) {
+      const body = { action, date, time };
       if (new_time) body.new_time = new_time;
-      const res = await fetch('/weekly_schedule', {
+      const res = await fetch('/single_changes', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body)
@@ -157,53 +165,47 @@
       return await res.json();
     }
 
-    async function addWeeklyTime(day_key) {
-      const input = document.getElementById('weekly-add-' + day_key);
+    async function addSingleChange(date) {
+      const input = document.getElementById('single-add-time-' + date);
       const time = input.value;
       if (!time) return alert('נא לבחור שעה');
-      const data = await updateWeeklySchedule('add', day_key, time);
+      const data = await updateSingleChanges('add', date, time);
       if (!data.error) location.reload();
       else alert(data.error);
     }
 
-    async function removeWeeklyTime(day_key, time) {
-      // מחיקה שקטה בלי popup ובלי רילואד
-      const data = await updateWeeklySchedule('remove', day_key, time);
+    async function removeSingleChange(date, time) {
+      const data = await updateSingleChanges('remove', date, time);
       if (!data.error) {
-        const wrapper = document.getElementById(`time-wrapper-${day_key}-${time.replace(':', '-')}`);
+        const wrapper = document.getElementById(`time-wrapper-${date}-${time.replace(':', '-')}`);
         if (wrapper) wrapper.remove();
       } else {
         alert(data.error);
       }
     }
 
-    function toggleActions(day_key, time) {
-      const id = `actions-${day_key}-${time.replace(':','-')}`;
+    function toggleActions(date, time) {
+      const id = `actions-${date}-${time.replace(':','-')}`;
       const el = document.getElementById(id);
       if (!el) return;
-      // סוגר את כל שאר התפריטים לפני
       document.querySelectorAll('.actions-container').forEach(c => {
         if (c !== el) c.style.display = 'none';
       });
       el.style.display = (el.style.display === 'block') ? 'none' : 'block';
     }
 
-    // פונקציית עריכה פשוטה: משנה טקסט של הכפתור לשדה input, וכפתורי אישור/ביטול
-    function enableEdit(day_key, time) {
-      const wrapperId = `time-wrapper-${day_key}-${time.replace(':', '-')}`;
+    function enableEdit(date, time) {
+      const wrapperId = `time-wrapper-${date}-${time.replace(':', '-')}`;
       const wrapper = document.getElementById(wrapperId);
       if (!wrapper) return;
 
-      // מוחקים את תוכן ה-wrapper
       wrapper.innerHTML = '';
 
-      // יוצרים input type=time עם הערך המקורי
       const input = document.createElement('input');
       input.type = 'time';
       input.value = time;
-      input.id = `edit-input-${day_key}-${time.replace(':', '-')}`;
+      input.id = `edit-input-${date}-${time.replace(':', '-')}`;
 
-      // כפתור אישור
       const saveBtn = document.createElement('button');
       saveBtn.textContent = '✓';
       saveBtn.style.marginLeft = '5px';
@@ -214,22 +216,16 @@
           alert('נא לבחור שעה תקינה');
           return;
         }
-        const data = await updateWeeklySchedule('edit', day_key, time, newTime);
-        if (!data.error) {
-          // רענן את הדף כדי להראות את השינוי
-          location.reload();
-        } else {
-          alert(data.error);
-        }
+        const data = await updateSingleChanges('edit', date, time, newTime);
+        if (!data.error) location.reload();
+        else alert(data.error);
       };
 
-      // כפתור ביטול
       const cancelBtn = document.createElement('button');
       cancelBtn.textContent = '✖';
       cancelBtn.style.marginLeft = '5px';
       cancelBtn.onclick = (e) => {
         e.stopPropagation();
-        // פשוט רענון הדף כדי לשחזר את התצוגה המקורית
         location.reload();
       };
 
@@ -247,50 +243,42 @@
   <a href="/logout" class="logout">🚪 התנתק</a>
 </div>
 
-<h1>ניהול HairBoss - שינויים שגרתיים</h1>
+<h1>ניהול HairBoss - שינויים חד פעמיים</h1>
 
 <div class="section">
-  <h2>שגרה שבועית</h2>
+  <h2>שינויים לפי תאריך</h2>
 
-  {% set day_map = {
-    '6': "ראשון",
-    '0': "שני",
-    '1': "שלישי",
-    '2': "רביעי",
-    '3': "חמישי",
-    '4': "שישי",
-    '5': "שבת"
-  } %}
-
-  {% for day_key in ['6','0','1','2','3','4','5'] %}
-    <div class="day-container">
-      <div class="day-header" onclick="toggleSection('weekly-times-{{day_key}}')">
-        <span>{{ day_map[day_key] }}</span>
-        <button class="toggle-day-btn {% if weekly_schedule[day_key]|length > 0 %}enabled{% endif %}"
-          onclick="event.stopPropagation(); toggleWeeklyDay('{{day_key}}', {{ 'false' if weekly_schedule[day_key]|length > 0 else 'true' }})">
-          {% if weekly_schedule[day_key]|length > 0 %}כבה יום{% else %}הפעל יום{% endif %}
+  {% for date in single_changes_dates %}
+    <div class="date-container">
+      <div class="date-header" onclick="toggleSection('times-{{date}}')">
+        <span>{{ getHebrewDayName(date) }} - {{ date }}</span>
+        <button class="toggle-date-btn {% if single_changes[date]|length > 0 %}enabled{% endif %}"
+          onclick="event.stopPropagation(); toggleDate('{{date}}', {{ 'false' if single_changes[date]|length > 0 else 'true' }})">
+          {% if single_changes[date]|length > 0 %}כבה יום{% else %}הפעל יום{% endif %}
         </button>
       </div>
 
-      <div class="times-container" id="weekly-times-{{day_key}}">
-        {% for time in weekly_schedule[day_key] %}
-          <div class="time-wrapper" id="time-wrapper-{{day_key}}-{{time|replace(':','-')}}">
-            <button class="time-btn" onclick="toggleActions('{{day_key}}', '{{time}}')">
+      <div class="times-container" id="times-{{date}}">
+        {% for time in single_changes[date] %}
+          <div class="time-wrapper" id="time-wrapper-{{date}}-{{time|replace(':','-')}}">
+            <button class="time-btn" onclick="toggleActions('{{date}}', '{{time}}')">
               {{ time }}
-              <span class="close-icon" onclick="event.stopPropagation(); removeWeeklyTime('{{day_key}}', '{{time}}')">✖️</span>
+              <span class="close-icon" onclick="event.stopPropagation(); removeSingleChange('{{date}}', '{{time}}')">✖️</span>
             </button>
-            <div class="actions-container" id="actions-{{day_key}}-{{time|replace(':','-')}}">
-              <button onclick="event.stopPropagation(); enableEdit('{{day_key}}', '{{time}}')">✏️ עריכה</button>
+            <div class="actions-container" id="actions-{{date}}-{{time|replace(':','-')}}">
+              <button onclick="event.stopPropagation(); enableEdit('{{date}}', '{{time}}')">✏️ עריכה</button>
             </div>
           </div>
         {% endfor %}
 
         <div class="add-time-input">
-          <input type="time" id="weekly-add-{{day_key}}">
-          <button class="add-btn" onclick="addWeeklyTime('{{day_key}}')">➕ הוסף שעה</button>
+          <input type="time" id="single-add-time-{{date}}">
+          <button class="add-btn" onclick="addSingleChange('{{date}}')">➕ הוסף שעה</button>
         </div>
       </div>
     </div>
+  {% else %}
+    <p style="text-align:center; color:#666;">אין שינויים חד פעמיים לתצוגה</p>
   {% endfor %}
 </div>
 
