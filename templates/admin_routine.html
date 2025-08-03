@@ -238,20 +238,27 @@
     wrapper.appendChild(cancelBtn);
   }
 
-    async function toggleWeeklyDay(day_key, enable) {
-    const action = enable ? 'enable_day' : 'disable_day';
-    const res = await fetch('/weekly_schedule', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ action, day_key })
-    });
-    const data = await res.json();
-    if (!data.error) {
+   function toggleWeeklyDay(dayKey, enable) {
+  fetch("/weekly_schedule", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: enable ? "enable_day" : "disable_day",
+      day_key: dayKey
+    }),
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
       location.reload();
     } else {
-      alert(data.error);
+      alert("אירעה שגיאה בפעולה");
     }
-  }
+  });
+}
+
 </script>
 </head>
 <body>
