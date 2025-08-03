@@ -58,6 +58,19 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
+def prepare_overrides_for_template():
+    overrides = load_json(OVERRIDES_FILE)
+    result = {}
+    for date, changes in overrides.items():
+        # נרצה רשימה של זמני override (לדוגמה, כל הזמנים שברשימת 'add')
+        # או להראות את כל הזמנים שהשינוי בוצע עליהם
+        # לפשט, נחבר את כל הזמנים מ-add ו-remove (ללא '__all__')
+        times = set(changes.get("add", []))
+        if changes.get("remove") and changes["remove"] != ["__all__"]:
+            times.update(changes["remove"])
+        result[date] = sorted(times)
+    return result
+
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
 def generate_week_slots():
@@ -188,11 +201,11 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    overrides = load_json(OVERRIDES_FILE)
+    overrides_simple = prepare_overrides_for_template()
     week_slots = generate_week_slots()
 
     return render_template("admin_overrides.html",
-                           overrides=overrides,
+                           overrides=overrides_simple,
                            week_slots=week_slots)
                            
 
