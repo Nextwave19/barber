@@ -276,6 +276,30 @@ def toggle_weekly_day():
 
     return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
 
+@app.route('/weekly_schedule_toggle_day', methods=['POST'])
+def weekly_schedule_toggle_day():
+    data = request.get_json()
+    day_key = data.get('day_key')
+    enable = data.get('enable')
+
+    # טען את weekly_schedule (כמו מקובץ JSON או ממקום אחסון)
+    weekly_schedule = load_json('weekly_schedule.json')  # או איך שאתה טוען את זה
+
+    if enable:
+        # הפעל יום - אם צריך, תוסיף שעות ברירת מחדל או תחזיר את השעות המקוריות
+        # לדוגמה: אם היום ריק תוסיף שעה לדוגמה:
+        if not weekly_schedule.get(day_key):
+            weekly_schedule[day_key] = ['09:00', '10:00']  # אפשר לשנות לשעות אמיתיות
+    else:
+        # כבה יום - מחק את כל השעות של היום
+        weekly_schedule[day_key] = []
+
+    # שמור את weekly_schedule חזרה לקובץ
+    save_json('weekly_schedule.json', weekly_schedule)
+
+    return jsonify({'error': None})
+
+
 
 # --- ניהול שינויים חד פעמיים (overrides) ---
 
