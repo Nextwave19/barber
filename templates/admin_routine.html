@@ -251,11 +251,16 @@
   })
   .then(response => response.json())
   .then(data => {
+    console.log(data); // ✅ חשוב!
     if (data.success) {
       location.reload();
     } else {
-      alert("אירעה שגיאה בפעולה");
+      alert("אירעה שגיאה בפעולה: " + (data.error || "לא ידועה"));
     }
+  })
+  .catch(error => {
+    console.error("שגיאה:", error);
+    alert("שגיאה בבקשת fetch");
   });
 }
 
