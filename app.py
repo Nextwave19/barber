@@ -223,7 +223,18 @@ def update_weekly_schedule():
 
     day_times = weekly_schedule.get(day_key, [])
 
-    if action == "add" and time:
+    if action == "enable_day":
+        if day_key not in weekly_schedule:
+            weekly_schedule[day_key] = []
+        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        return jsonify({"message": "Day enabled", "weekly_schedule": weekly_schedule})
+
+    elif action == "disable_day":
+        weekly_schedule[day_key] = []
+        save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
+        return jsonify({"message": "Day disabled", "weekly_schedule": weekly_schedule})
+
+    elif action == "add" and time:
         if time not in day_times:
             day_times.append(time)
             day_times.sort()
@@ -244,6 +255,7 @@ def update_weekly_schedule():
 
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
+
 
 @app.route("/weekly_toggle_day", methods=["POST"])
 def toggle_weekly_day():
