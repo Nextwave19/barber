@@ -221,20 +221,24 @@ def update_weekly_schedule():
     if day_key not in [str(i) for i in range(7)]:
         return jsonify({"error": "Invalid day key"}), 400
 
-    day_times = weekly_schedule.get(day_key, [])
-
+    # קודם לטפל ב-enable_day ו-disable_day
     if action == "enable_day":
         if day_key not in weekly_schedule:
             weekly_schedule[day_key] = []
+        # אם יש ימים כבויים, אפשר להפעיל (להחזיר רשימת שעות ריקה היא מסמלת הפעלה)
+        # אפשר גם לשמור מראש שעות לפי הצורך, כרגע פשוט שומר ריק
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
         return jsonify({"message": "Day enabled", "weekly_schedule": weekly_schedule})
 
-    elif action == "disable_day":
+    if action == "disable_day":
         weekly_schedule[day_key] = []
         save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
         return jsonify({"message": "Day disabled", "weekly_schedule": weekly_schedule})
 
-    elif action == "add" and time:
+    # אם לא enable/disable, נמשיך לפעולות עם זמן
+    day_times = weekly_schedule.get(day_key, [])
+
+    if action == "add" and time:
         if time not in day_times:
             day_times.append(time)
             day_times.sort()
@@ -255,7 +259,6 @@ def update_weekly_schedule():
 
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
     return jsonify({"message": "Weekly schedule updated", "weekly_schedule": weekly_schedule})
-
 
 @app.route("/weekly_toggle_day", methods=["POST"])
 def toggle_weekly_day():
