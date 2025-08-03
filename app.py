@@ -58,19 +58,6 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
-def prepare_overrides_for_template():
-    overrides = load_json(OVERRIDES_FILE)
-    result = {}
-    for date, changes in overrides.items():
-        # נרצה רשימה של זמני override (לדוגמה, כל הזמנים שברשימת 'add')
-        # או להראות את כל הזמנים שהשינוי בוצע עליהם
-        # לפשט, נחבר את כל הזמנים מ-add ו-remove (ללא '__all__')
-        times = set(changes.get("add", []))
-        if changes.get("remove") and changes["remove"] != ["__all__"]:
-            times.update(changes["remove"])
-        result[date] = sorted(times)
-    return result
-
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
 def generate_week_slots():
@@ -201,11 +188,11 @@ def admin_overrides():
     if not session.get("is_admin"):
         return redirect("/login")
 
-    overrides_simple = prepare_overrides_for_template()
+    overrides = load_json(OVERRIDES_FILE)
     week_slots = generate_week_slots()
 
     return render_template("admin_overrides.html",
-                           overrides=overrides_simple,
+                           overrides=overrides,
                            week_slots=week_slots)
                            
 
@@ -275,30 +262,6 @@ def toggle_weekly_day():
     save_json(WEEKLY_SCHEDULE_FILE, weekly_schedule)
 
     return jsonify({"message": "Day updated", "weekly_schedule": weekly_schedule})
-
-@app.route('/weekly_schedule_toggle_day', methods=['POST'])
-def weekly_schedule_toggle_day():
-    data = request.get_json()
-    day_key = data.get('day_key')
-    enable = data.get('enable')
-
-    # טען את weekly_schedule (כמו מקובץ JSON או ממקום אחסון)
-    weekly_schedule = load_json('weekly_schedule.json')  # או איך שאתה טוען את זה
-
-    if enable:
-        # הפעל יום - אם צריך, תוסיף שעות ברירת מחדל או תחזיר את השעות המקוריות
-        # לדוגמה: אם היום ריק תוסיף שעה לדוגמה:
-        if not weekly_schedule.get(day_key):
-            weekly_schedule[day_key] = ['09:00', '10:00']  # אפשר לשנות לשעות אמיתיות
-    else:
-        # כבה יום - מחק את כל השעות של היום
-        weekly_schedule[day_key] = []
-
-    # שמור את weekly_schedule חזרה לקובץ
-    save_json('weekly_schedule.json', weekly_schedule)
-
-    return jsonify({'error': None})
-
 
 
 # --- ניהול שינויים חד פעמיים (overrides) ---
