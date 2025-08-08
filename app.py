@@ -1,4 +1,5 @@
 import os
+import requests
 import json
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, render_template as original_render_template, redirect, session, g
@@ -60,7 +61,7 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
-def generate_week_slots():
+def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
     today = datetime.today()
@@ -76,23 +77,36 @@ def generate_week_slots():
 
         day_key = str(weekday)
         scheduled_times = weekly_schedule.get(day_key, [])
-
         override = overrides.get(date_str, {"add": [], "remove": []})
         add_times = override.get("add", [])
         remove_times = override.get("remove", [])
 
-        if remove_times == ["__all__"]:
-            all_final = []
-        else:
-            # תיקון: להסיר את הזמנים שנמצאים ב-remove_times
-            all_final = sorted(set(scheduled_times + add_times) - set(remove_times))
+        is_disabled_day = remove_times == ["__all__"]
+        all_times = sorted(set(scheduled_times + add_times + remove_times))
 
         final_times = []
-        for t in all_final:
-            if remove_times == ["__all__"] or t in remove_times:
-                final_times.append({"time": t, "available": False})
+        for t in all_times:
+            available = not (is_disabled_day or t in remove_times)
+
+            if with_sources:
+                # ניתוח מקור השעה לצבעים
+                if t in scheduled_times and t in add_times:
+                    source = "edited"   # כחול
+                elif t in add_times and t not in scheduled_times:
+                    source = "added"    # צהוב
+                elif t in scheduled_times and (t in remove_times or is_disabled_day):
+                    source = "disabled"  # אפור
+                else:
+                    source = "base"     # ירוק
+
+                final_times.append({
+                    "time": t,
+                    "available": available,
+                    "source": source
+                })
             else:
-                final_times.append({"time": t, "available": True})
+                if available:
+                    final_times.append({"time": t, "available": True})
 
         week_slots[date_str] = {
             "day_name": day_name,
@@ -204,8 +218,7 @@ def admin_overrides():
         day_name = hebrew_day_names[d.weekday()]
         date_map[d_str] = f"{d.strftime('%-d.%m')} ({day_name})"
 
-    # יוצר את הרשימה המשולבת של תאריכים ושעות עם זמינות
-    week_slots = generate_week_slots()
+    week_slots = generate_week_slots(with_sources=True)
 
     return render_template("admin_overrides.html",
                            overrides=overrides,
@@ -513,6 +526,12 @@ def book_appointment():
 # --- שליחת אימייל ---
 
 def send_email(name, phone, date, time, service, price):
+    EMAIL_USER = os.environ.get("EMAIL_USER")
+    EMAIL_PASS = os.environ.get("EMAIL_PASS")
+    if not EMAIL_USER or not EMAIL_PASS:
+        print("Missing EMAIL_USER or EMAIL_PASS environment variables")
+        return
+
     msg = EmailMessage()
     msg.set_content(f"""
 New appointment booked:
@@ -525,14 +544,11 @@ Service: {service}
 Price: {price}₪
 """)
     msg['Subject'] = f'New Appointment - {name}'
-    msg['From'] = 'nextwaveaiandweb@gmail.com'  # שנה למייל שלך
-    msg['To'] = 'nextwaveaiandweb@gmail.com'    # שנה למייל שלך
+    msg['From'] = EMAIL_USER
+    msg['To'] = EMAIL_USER
 
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        EMAIL_USER = os.environ.get("EMAIL_USER")
-        EMAIL_PASS = os.environ.get("EMAIL_PASS")
-
         server.login(EMAIL_USER, EMAIL_PASS)
         server.send_message(msg)
         server.quit()
@@ -563,18 +579,50 @@ def ask_bot():
     data = request.get_json()
     question = data.get("message", "").strip()
 
+    if not question:
+        return jsonify({"answer": "אנא כתוב שאלה."})
+
+    # טען את הידע הנוסף של הבוט מהקובץ
     knowledge_text = load_text(BOT_KNOWLEDGE_FILE)
 
-    if not question:
-        answer = "אנא כתוב שאלה."
-    elif "שעות" in question or "תורים" in question:
-        answer = "השעות הזמינות הן לפי השגרה השבועית, אפשר לראות בדף ההזמנות."
-    elif "מחיר" in question:
-        answer = "המחירים שונים לפי השירות, למשל תספורת גברים 80 ש\"ח."
-    else:
-        answer = "מצטער, לא הבנתי את השאלה. נסה לשאול משהו אחר."
+    # הכנת ההיסטוריה של השיחה
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant for a hair salon booking system."},
+        {"role": "system", "content": f"Additional info: {knowledge_text}"},
+        {"role": "user", "content": question}
+    ]
 
-    return jsonify({"answer": answer})
+    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    if not GITHUB_TOKEN:
+        return jsonify({"error": "Missing GitHub API token"}), 500
+
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "openai/gpt-4.1",
+        "messages": messages,
+        "temperature": 0.7,
+        "max_tokens": 200
+    }
+
+    try:
+        response = requests.post(
+            "https://models.github.ai/inference/v1/chat/completions",
+            headers=headers,
+            json=payload
+        )
+        response.raise_for_status()
+        output = response.json()
+        answer = output["choices"][0]["message"]["content"].strip()
+        return jsonify({"answer": answer})
+    except Exception as e:
+        print("Error calling GitHub AI API:", e)
+        # fallback לתשובה פשוטה במקרה של שגיאה
+        fallback_answer = "מצטער, לא הצלחתי לעבד את השאלה כרגע."
+        return jsonify({"answer": fallback_answer})
 
 # --- הפעלת השרת ---
 
