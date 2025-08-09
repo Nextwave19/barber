@@ -90,12 +90,15 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) rotate(-45deg);
-      color: rgba(255, 255, 255, 0.6); /* לבן עם שקיפות */
+      color: rgba(0, 0, 0, 0.6);
       font-weight: bold;
       font-size: 1em;
       pointer-events: none; /* לא מפריע ללחיצות */
       user-select: none;
       white-space: nowrap;
+    }
+    .time-btn.booked .close-icon {
+      display: none;
     }
 
     .time-btn .close-icon {
@@ -371,6 +374,9 @@
         {% endif %}
         {% if slot.source in ['disabled'] %}
           <button onclick="event.stopPropagation(); revertOverride('{{date}}', '{{time}}')">↩️ החזר</button>
+        {% endif %}
+        {% if slot.source in ['booked'] %}
+          <button onclick="event.stopPropagation(); showBookingDetails('{{ date }}', '{{ time }}')">📋 פרטים</button>
         {% endif %}
       </div>
     </div>
