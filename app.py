@@ -14,7 +14,8 @@ WEEKLY_SCHEDULE_FILE = "weekly_schedule.json"
 OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
-ONE_TIME_FILE = "one_time_changes.json"   
+ONE_TIME_FILE = "one_time_changes.json"  
+BOOKINGS_FILE = "bookings.json"
 
 # שירותים ומחירים
 services_prices = {
