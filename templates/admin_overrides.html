@@ -342,6 +342,7 @@
         {% if slot.source == 'disabled' %}disabled
         {% elif slot.source == 'edited' %}edited
         {% elif slot.source == 'added' %}added
+        {% elif slot.source == 'booked' %}booked
         {% else %}base{% endif %}"
         onclick="toggleActions('{{date}}', '{{time}}')">
         {{ time }}
