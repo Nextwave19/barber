@@ -322,6 +322,8 @@
         alert('שגיאה במחיקת היום');
       }
     }
+    function showBookingDetails(date, time) {
+    window.location.href = `/appointment_details?date=${encodeURIComponent(date)}&time=${encodeURIComponent(time)}`;
 
     async function revertOverride(date, time) {
       await updateOverrides(date, time, 'revert');
