@@ -560,24 +560,14 @@ def appointment_details():
     date = request.args.get('date')
     time = request.args.get('time')
 
-    if not date or not time:
-        return "Missing date or time", 400
+    appointments = load_appointments() 
 
-    # טען את רשימת ההזמנות שלך (למשל מ־JSON או DB)
-    appointments = load_json('appointments.json')  # או כל מקור אחר שלך
-
-    # מצא את ההזמנה המתאימה
-    appointment = None
     for appt in appointments:
-        if appt.get('date') == date and appt.get('time') == time:
-            appointment = appt
-            break
+        if isinstance(appt, dict) and appt.get('date') == date and appt.get('time') == time:
+           
+            return render_template('appointment_details.html', appointment=appt)
 
-    if not appointment:
-        return "ההזמנה לא נמצאה", 404
-
-    # הצג תבנית עם פרטי ההזמנה
-    return render_template('appointment_details.html', appointment=appointment)
+    return "פרטי ההזמנה לא נמצאו", 404
 
 # --- ניהול טקסט ידע של הבוט ---
 
