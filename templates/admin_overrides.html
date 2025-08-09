@@ -78,7 +78,24 @@
       color: black;
     }
     .time-btn.booked {
+      position: relative;
       background: #e74c3c; /* אדום */
+      color: white;
+      overflow: visible;
+    }
+
+    .time-btn.booked::after {
+      content: "הוזמן";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      color: rgba(255, 255, 255, 0.6); /* לבן עם שקיפות */
+      font-weight: bold;
+      font-size: 1em;
+      pointer-events: none; /* לא מפריע ללחיצות */
+      user-select: none;
+      white-space: nowrap;
     }
 
     .time-btn .close-icon {
