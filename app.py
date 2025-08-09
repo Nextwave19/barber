@@ -62,17 +62,17 @@ def save_one_time_changes(data):
 
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
-def get_source(t, scheduled, added, removed, edits, disabled_day, booked):
+def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
+    if t in booked_times:
+        return "booked"          # אדום - תפוס ע"י לקוח
     for edit in edits:
         if t == edit['to']:
             return "edited"      # כחול - ערוך
-    if t in booked:
-        return "booked"         # אדום - מוזמן
     if t in added and t not in scheduled:
-        return "added"          # צהוב - חדש
+        return "added"           # צהוב - חדש
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"       # אפור - מושבת
-    return "base"               # ירוק - בסיסי
+        return "disabled"        # אפור - מושבת ע"י אדמין
+    return "base"                # ירוק - בסיסי
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
