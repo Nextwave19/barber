@@ -15,7 +15,6 @@ OVERRIDES_FILE = "overrides.json"
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"
 APPOINTMENTS_FILE = "appointments.json"
 ONE_TIME_FILE = "one_time_changes.json"  
-BOOKINGS_FILE = "bookings.json"
 
 # שירותים ומחירים
 services_prices = {
@@ -60,6 +59,19 @@ def load_one_time_changes():
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
+# --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
+
+def get_booked_times(appointments):
+    booked = {}
+    for date, apps_list in appointments.items():
+        times = []
+        for app in apps_list:
+            time = app.get('time')  # הנחה שמפתח הזמן נקרא 'time'
+            if time:
+                times.append(time)
+        booked[date] = times
+    return booked
+
 # --- יצירת רשימת שעות שבועית עם שינויים ---
 
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
@@ -77,7 +89,8 @@ def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
-    bookings = load_json(BOOKINGS_FILE)  # כאן תקרא את ההזמנות
+    appointments = load_appointments()
+    bookings = get_booked_times(appointments)
     today = datetime.today()
     week_slots = {}
     heb_days = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
@@ -96,7 +109,7 @@ def generate_week_slots(with_sources=False):
         edits = override.get("edit", [])
         disabled_day = removed == ["__all__"]
 
-        # השעות שכבר מוזמנות בתאריך הזה
+        # השעות שכבר מוזמנות בתאריך הזה מתוך appointments.json
         booked_times = bookings.get(date_str, [])
 
         edited_to_times = [edit['to'] for edit in edits]
