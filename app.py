@@ -651,6 +651,31 @@ def book_appointment():
         print("Error sending email:", e)
 
     return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
+    
+
+@app.route('/cancel_appointment', methods=['POST'])
+def cancel_appointment():
+    data = request.get_json()
+    date = data.get('date')
+    time = data.get('time')
+
+    appointments = load_appointments()
+    bookings = load_json(BOOKINGS_FILE)
+
+    if date in appointments:
+        original_len = len(appointments[date])
+        appointments[date] = [a for a in appointments[date] if a.get('time') != time]
+
+        if len(appointments[date]) < original_len:
+            save_appointments(appointments)
+            # הסרת השעה מרשימת ההזמנות
+            if date in bookings and time in bookings[date]:
+                bookings[date].remove(time)
+                save_json(BOOKINGS_FILE, bookings)
+            return jsonify({"success": True, "message": "התור בוטל בהצלחה"})
+    
+    return jsonify({"success": False, "message": "התור לא נמצא"})
+
 
 
 # --- שליחת אימייל ---
