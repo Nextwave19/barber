@@ -650,8 +650,12 @@ def book_appointment():
     except Exception as e:
         print("Error sending email:", e)
 
-    return jsonify({"message": f"Appointment booked for {date} at {time} for {service}."})
-    
+    return jsonify({
+     "message": f"Appointment booked for {date} at {time} for {service}.",
+     "date": date,
+     "time": time
+})
+
 
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
