@@ -553,22 +553,20 @@ def add_slot():
     save_one_time_changes(one_time)
     return jsonify({'message': 'Slot added'})
 
-from flask import request, render_template
-
 @app.route('/appointment_details')
 def appointment_details():
     date = request.args.get('date')
     time = request.args.get('time')
 
-    appointments = load_appointments() 
+    appointments = load_appointments()
 
-    for appt in appointments:
-        if isinstance(appt, dict) and appt.get('date') == date and appt.get('time') == time:
-           
-            return render_template('appointment_details.html', appointment=appt)
+    if date in appointments:
+        for appt in appointments[date]:
+            if appt.get('time') == time:
+                return render_template('appointment_details.html', appointment=appt)
 
     return "פרטי ההזמנה לא נמצאו", 404
-
+    
 # --- ניהול טקסט ידע של הבוט ---
 
 @app.route("/bot_knowledge", methods=["GET", "POST"])
