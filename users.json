@@ -1,0 +1,12 @@
+[
+  {
+    "username": "yoav",
+    "password": "123456",
+    "business": "HairBoss Yoav"
+  },
+  {
+    "username": "dani",
+    "password": "abcdef",
+    "business": "Dani Hair Studio"
+  }
+]
