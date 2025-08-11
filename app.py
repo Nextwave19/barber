@@ -9,12 +9,11 @@ from email.message import EmailMessage
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "default_secret")
 
-# קבצים כלליים (משותפים לכל המשתמשים)
-WEEKLY_SCHEDULE_FILE = "business_schedules"  # תיקייה לשגרות השבועיות של כל המשתמשים
-OVERRIDES_FILE = "business_overrides"        # תיקייה לשינויים חד-פעמיים לכל משתמש
-APPOINTMENTS_FILE = "business_appointments" # תיקייה להזמנות לכל משתמש
+# תיקיות לשמירת קבצי JSON אישיים לכל משתמש
+WEEKLY_SCHEDULE_DIR = "business_schedules"  # תיקייה לשגרות השבועיות של כל המשתמשים
+OVERRIDES_DIR = "business_overrides"        # תיקייה לשינויים חד-פעמיים לכל משתמש
+APPOINTMENTS_DIR = "business_appointments" # תיקייה להזמנות לכל משתמש
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"   # ידע משותף (אפשר להרחיב בעתיד)
-
 
 # שירותים ומחירים - נניח שזה אחיד לכל המשתמשים, או אפשר לשנות בעתיד
 services_prices = {
@@ -42,13 +41,13 @@ def get_user_files(username):
     יוצר תיקיות במידת הצורך
     """
     # צור תיקיות אם לא קיימות
-    os.makedirs(WEEKLY_SCHEDULE_FILE, exist_ok=True)
-    os.makedirs(OVERRIDES_FILE, exist_ok=True)
-    os.makedirs(APPOINTMENTS_FILE, exist_ok=True)
+    os.makedirs(WEEKLY_SCHEDULE_DIR, exist_ok=True)
+    os.makedirs(OVERRIDES_DIR, exist_ok=True)
+    os.makedirs(APPOINTMENTS_DIR, exist_ok=True)
 
-    weekly_schedule_file = os.path.join(WEEKLY_SCHEDULE_FILE, f"{username}_weekly_schedule.json")
-    overrides_file = os.path.join(OVERRIDES_FILE, f"{username}_overrides.json")
-    appointments_file = os.path.join(APPOINTMENTS_FILE, f"{username}_appointments.json")
+    weekly_schedule_file = os.path.join(WEEKLY_SCHEDULE_DIR, f"{username}_weekly_schedule.json")
+    overrides_file = os.path.join(OVERRIDES_DIR, f"{username}_overrides.json")
+    appointments_file = os.path.join(APPOINTMENTS_DIR, f"{username}_appointments.json")
 
     # אם הקבצים לא קיימים, צור קבצי JSON ריקים ברירת מחדל
     if not os.path.exists(weekly_schedule_file):
@@ -94,10 +93,6 @@ def load_json_with_default(filename, default_filename=None):
         return data
     else:
         return {}
-
-weekly_schedule = load_json_with_default(WEEKLY_SCHEDULE_FILE, "weekly_schedule.json")
-overrides = load_json_with_default(OVERRIDES_FILE)  # כברירת מחדל ריק
-appointments = load_json_with_default(APPOINTMENTS_FILE)  # כברירת מחדל ריק
 
 
 # --- פונקציות עזר לניהול הזמנות ושעות ---
