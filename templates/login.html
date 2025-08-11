@@ -79,31 +79,23 @@
             text-decoration: underline;
         }
 
-        .password-container {
-            position: relative;
-            opacity: 0;
-            max-height: 0;
-            transition: all 0.3s ease;
-            overflow: hidden;
-        }
-
-        .password-container.show {
-            opacity: 1;
-            max-height: 100px;
-        }
-
         .toggle-password {
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
+            position: relative;
             cursor: pointer;
             font-size: 14px;
             color: #777;
+            user-select: none;
+            margin-left: 10px;
+            display: inline-block;
         }
 
         .toggle-password:hover {
             color: #333;
+        }
+
+        .password-wrapper {
+            display: flex;
+            align-items: center;
         }
     </style>
 </head>
@@ -119,8 +111,8 @@
     <form method="POST">
         <input type="text" name="username" id="username" placeholder="שם משתמש" value="{{ request.form.username or '' }}" required>
 
-        <div id="password-container" class="password-container">
-            <input type="password" name="password" id="password" placeholder="סיסמה">
+        <div class="password-wrapper">
+            <input type="password" name="password" id="password" placeholder="סיסמה" required>
             <span class="toggle-password" onclick="togglePassword()">הצג</span>
         </div>
 
@@ -133,19 +125,6 @@
 </div>
 
 <script>
-    const adminUser = "{{ admin_user }}";
-
-    function togglePasswordField() {
-        const username = document.getElementById('username').value.trim();
-        const passwordContainer = document.getElementById('password-container');
-
-        if (username === adminUser) {
-            passwordContainer.classList.add("show");
-        } else {
-            passwordContainer.classList.remove("show");
-        }
-    }
-
     function togglePassword() {
         const passwordInput = document.getElementById('password');
         const toggle = document.querySelector('.toggle-password');
@@ -157,12 +136,6 @@
             toggle.textContent = "הצג";
         }
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const usernameInput = document.getElementById('username');
-        usernameInput.addEventListener('input', togglePasswordField);
-        togglePasswordField(); // להריץ מידית אם הטופס נטען עם ערך
-    });
 </script>
 
 </body>
