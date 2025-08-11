@@ -651,36 +651,66 @@ def book_appointment():
         print("Error sending email:", e)
 
     return jsonify({
-     "message": f"Appointment booked for {date} at {time} for {service}.",
-     "date": date,
-     "time": time
+    "message": f"Appointment booked for {date} at {time} for {service}.",
+    "date": date,
+    "time": time,
+    "service": service,
+    "can_cancel": True,
+    "cancel_endpoint": "/cancel_appointment"
 })
-
 
 @app.route('/cancel_appointment', methods=['POST'])
 def cancel_appointment():
     data = request.get_json()
     date = data.get('date')
     time = data.get('time')
-
-    appointments = load_appointments()
-    bookings = load_json(BOOKINGS_FILE)
-
-    if date in appointments:
-        original_len = len(appointments[date])
-        appointments[date] = [a for a in appointments[date] if a.get('time') != time]
-
-        if len(appointments[date]) < original_len:
-            save_appointments(appointments)
-            # הסרת השעה מרשימת ההזמנות
-            if date in bookings and time in bookings[date]:
-                bookings[date].remove(time)
-                save_json(BOOKINGS_FILE, bookings)
-            return jsonify({"success": True, "message": "התור בוטל בהצלחה"})
+    name = data.get('name')
+    phone = data.get('phone')
     
-    return jsonify({"success": False, "message": "התור לא נמצא"})
+    try:
+        with open(APPOINTMENTS_FILE, 'r', encoding='utf-8') as f:
+            appointments = json.load(f)
+    except FileNotFoundError:
+        appointments = {}
+
+    day_appointments = appointments.get(date, [])
+
+    new_day_appointments = [
+        appt for appt in day_appointments
+        if not (appt['time'] == time and appt['name'] == name and appt['phone'] == phone)
+    ]
+
+    if len(new_day_appointments) == len(day_appointments):
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    appointments[date] = new_day_appointments
+
+    with open(APPOINTMENTS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(appointments, f, ensure_ascii=False, indent=2)
 
 
+    # --- עדכון overrides להחזיר שעה זמינה ---
+    try:
+        with open(OVERRIDES_FILE, 'r', encoding='utf-8') as f:
+            overrides = json.load(f)
+    except FileNotFoundError:
+        overrides = {}
+
+    if date not in overrides:
+        overrides[date] = {"add": [], "remove": [], "edit": []}
+
+    # הסר את השעה מרשימת ה-remove אם קיימת שם (שעה שנכבתה)
+    if time in overrides[date].get("remove", []):
+        overrides[date]["remove"].remove(time)
+
+    # הוסף את השעה ל-add אם לא קיימת (אפשרות שהיא הייתה כבויה)
+    if time not in overrides[date].get("add", []):
+        overrides[date]["add"].append(time)
+
+    with open(OVERRIDES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(overrides, f, ensure_ascii=False, indent=2)
+
+    return jsonify({'message': f'Appointment on {date} at {time} canceled successfully.'})
 
 # --- שליחת אימייל ---
 
