@@ -187,11 +187,11 @@ def login():
 
         user = next((u for u in users_data if u["username"] == username), None)
         if not user:
-            error = "משתמש לא קיים"
+            error = "שם משתמש או סיסמא שגויים"
             return render_template('login.html', error=error)
 
         if user["password"] != password:
-            error = "סיסמה שגויה"
+            error = "שם משתמש או סיסמא שגויים"
             return render_template('login.html', error=error)
 
         session["username"] = user["username"]
