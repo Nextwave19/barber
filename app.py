@@ -33,7 +33,6 @@ def load_users():
 
 users_data = load_users()
 
-
 def load_json(filename):
     if not os.path.exists(filename):
         return {}
@@ -60,39 +59,34 @@ def load_appointments():
 def save_appointments(data):
     save_json(APPOINTMENTS_FILE, data)
 
-# פונקציות ל-one-time changes:
 def load_one_time_changes():
     return load_json(ONE_TIME_FILE)
 
 def save_one_time_changes(data):
     save_json(ONE_TIME_FILE, data)
 
-# --- פונקציה שמוציאה את השעות התפוסות מתוך הפגישות ---
-
 def get_booked_times(appointments):
     booked = {}
     for date, apps_list in appointments.items():
         times = []
         for app in apps_list:
-            time = app.get('time')  # הנחה שמפתח הזמן נקרא 'time'
+            time = app.get('time')
             if time:
                 times.append(time)
         booked[date] = times
     return booked
 
-# --- יצירת רשימת שעות שבועית עם שינויים ---
-
 def get_source(t, scheduled, added, removed, edits, disabled_day, booked_times):
     if t in booked_times:
-        return "booked"          # אדום - תפוס ע"י לקוח
+        return "booked"
     for edit in edits:
         if t == edit['to']:
-            return "edited"      # כחול - ערוך
+            return "edited"
     if t in added and t not in scheduled:
-        return "added"           # צהוב - חדש
+        return "added"
     if t in scheduled and (t in removed or disabled_day):
-        return "disabled"        # אפור - מושבת ע"י אדמין
-    return "base"                # ירוק - בסיסי
+        return "disabled"
+    return "base"
 
 def generate_week_slots(with_sources=False):
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
@@ -117,7 +111,6 @@ def generate_week_slots(with_sources=False):
         edits = override.get("edit", [])
         disabled_day = removed == ["__all__"]
 
-        # השעות שכבר מוזמנות בתאריך הזה מתוך appointments.json
         booked_times = bookings.get(date_str, [])
 
         edited_to_times = [edit['to'] for edit in edits]
@@ -149,7 +142,6 @@ def generate_week_slots(with_sources=False):
 
     return week_slots
 
-
 def is_slot_available(date, time):
     week_slots = generate_week_slots()
     day_info = week_slots.get(date)
@@ -165,7 +157,6 @@ def is_slot_available(date, time):
 @app.before_request
 def before_request():
     g.username = session.get('username')
-    g.is_admin = session.get('is_admin')
     g.business = session.get('business')
 
 # --- החלפת render_template ---
@@ -176,7 +167,6 @@ def render_template(template_name_or_list, **context):
 
 # --- ניהול התחברות ---
 
-
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
@@ -186,69 +176,49 @@ def login():
         password = request.form.get('password', '').strip()
 
         user = next((u for u in users_data if u["username"] == username), None)
-        if not user:
-            error = "שם משתמש או סיסמא שגויים"
-            return render_template('login.html', error=error)
-
-        if user["password"] != password:
+        if not user or user["password"] != password:
             error = "שם משתמש או סיסמא שגויים"
             return render_template('login.html', error=error)
 
         session["username"] = user["username"]
         session["business"] = user["business"]
-        session["is_admin"] = user.get("is_admin", False)
 
-        if session["is_admin"]:
-            return redirect("/buisnes_admin")
-        else:
-            return redirect("/main_admin")
+        return redirect("/main_admin")
 
     return render_template("login.html", error=error)
-
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect("/")
+    return redirect("/login")
 
 # --- דף ניהול ראשי ---
 
-@app.route("/buisnes_admin")
-def buisnes_admin():
-    if not session.get("is_admin"):
-        return redirect("/login")
-    return render_template("buisnes_admin.html")
-
 @app.route("/main_admin")
 def main_admin():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return redirect("/login")
     return render_template("main_admin.html")
 
 @app.route("/admin_routine")
 def admin_routine():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return redirect("/login")
 
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
-
     return render_template("admin_routine.html", weekly_schedule=weekly_schedule)
 
-                          
 @app.route("/admin_overrides")
 def admin_overrides():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return redirect("/login")
 
-    # טוען את השגרה השבועית והאובריידים ישירות מהקבצים
     weekly_schedule = load_json(WEEKLY_SCHEDULE_FILE)
     overrides = load_json(OVERRIDES_FILE)
 
-    # מקבל רשימת תאריכים לשבוע הקרוב בפורמט YYYY-MM-DD
     today = datetime.today()
     week_dates = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)]
 
-    # מיפוי תאריכים לשמות ימי השבוע בעברית עם תאריך מוצג
     hebrew_day_names = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת", "ראשון"]
     date_map = {}
     for d_str in week_dates:
@@ -265,10 +235,9 @@ def admin_overrides():
                            date_map=date_map,
                            week_slots=week_slots)
 
-                           
 @app.route("/appointments")
 def admin_appointments():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return redirect("/login")
     appointments = load_appointments()
     return render_template("admin_appointments.html", appointments=appointments)
@@ -277,7 +246,7 @@ def admin_appointments():
 
 @app.route("/weekly_schedule", methods=["POST"])
 def update_weekly_schedule():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json()
@@ -332,7 +301,7 @@ def update_weekly_schedule():
 
 @app.route("/weekly_toggle_day", methods=["POST"])
 def toggle_weekly_day():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json()
@@ -353,7 +322,7 @@ def toggle_weekly_day():
 
 @app.route("/overrides", methods=["POST"])
 def update_overrides():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json()
@@ -488,7 +457,7 @@ def update_overrides():
 
 @app.route("/overrides_toggle_day", methods=["POST"])
 def toggle_override_day():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.get_json()
@@ -583,7 +552,7 @@ def appointment_details():
 
 @app.route("/bot_knowledge", methods=["GET", "POST"])
 def bot_knowledge():
-    if not session.get("is_admin"):
+    if "username" not in session:
         return redirect("/login")
 
     if request.method == "POST":
