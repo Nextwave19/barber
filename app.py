@@ -15,10 +15,6 @@ OVERRIDES_DIR = "business_overrides"        # תיקייה לשינויים חד
 APPOINTMENTS_DIR = "business_appointments" # תיקייה להזמנות לכל משתמש
 BOT_KNOWLEDGE_FILE = "bot_knowledge.txt"   # ידע משותף (אפשר להרחיב בעתיד)
 
-weekly_schedule = load_json_with_default(WEEKLY_SCHEDULE_FILE, "weekly_schedule.json")
-overrides = load_json_with_default(OVERRIDES_FILE)  # כברירת מחדל ריק
-appointments = load_json_with_default(APPOINTMENTS_FILE)  # כברירת מחדל ריק
-
 
 # שירותים ומחירים - נניח שזה אחיד לכל המשתמשים, או אפשר לשנות בעתיד
 services_prices = {
@@ -98,6 +94,11 @@ def load_json_with_default(filename, default_filename=None):
         return data
     else:
         return {}
+
+weekly_schedule = load_json_with_default(WEEKLY_SCHEDULE_FILE, "weekly_schedule.json")
+overrides = load_json_with_default(OVERRIDES_FILE)  # כברירת מחדל ריק
+appointments = load_json_with_default(APPOINTMENTS_FILE)  # כברירת מחדל ריק
+
 
 # --- פונקציות עזר לניהול הזמנות ושעות ---
 
