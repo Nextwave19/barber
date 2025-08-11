@@ -26,6 +26,14 @@ services_prices = {
 
 # --- פונקציות עזר ---
 
+def load_users():
+    with open("business_users.json", "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data["users"]
+
+users_data = load_users()
+
+
 def load_json(filename):
     if not os.path.exists(filename):
         return {}
@@ -158,47 +166,45 @@ def is_slot_available(date, time):
 def before_request():
     g.username = session.get('username')
     g.is_admin = session.get('is_admin')
+    g.business = session.get('business')
 
 # --- החלפת render_template ---
 
 def render_template(template_name_or_list, **context):
-    context['session'] = {
-        'username': g.get('username'),
-        'is_admin': g.get('is_admin')
-    }
+    context['business'] = g.get('business')
     return original_render_template(template_name_or_list, **context)
 
 # --- ניהול התחברות ---
 
+
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     error = None
-    admin_user = os.environ.get('ADMIN_USERNAME')
-    admin_password = os.environ.get('ADMIN_PASSWORD') or "1234"
 
     if request.method == 'POST':
         username = request.form['username'].strip()
-        password = request.form.get('password', '')
+        password = request.form.get('password', '').strip()
 
-        if not username:
-            error = "יש להזין שם משתמש"
-            return render_template('login.html', error=error, admin_user=admin_user)
+        user = next((u for u in users_data if u["username"] == username), None)
+        if not user:
+            error = "משתמש לא קיים"
+            return render_template('login.html', error=error)
 
-        if username == admin_user:
-            if password == admin_password:
-                session['username'] = username
-                session['is_admin'] = True
-                return redirect('/main_admin')
-            else:
-                error = "סיסמה שגויה"
-                return render_template('login.html', error=error, admin_user=admin_user)
+        if user["password"] != password:
+            error = "סיסמה שגויה"
+            return render_template('login.html', error=error)
 
-        # משתמש רגיל - אין צורך בסיסמה
-        session['username'] = username
-        session['is_admin'] = False
-        return redirect('/')
+        session["username"] = user["username"]
+        session["business"] = user["business"]
+        session["is_admin"] = user.get("is_admin", False)
 
-    return render_template('login.html', error=error, admin_user=admin_user)
+        if session["is_admin"]:
+            return redirect("/buisnes_admin")
+        else:
+            return redirect("/main_admin")
+
+    return render_template("login.html", error=error)
+
 
 @app.route("/logout")
 def logout():
@@ -206,6 +212,12 @@ def logout():
     return redirect("/")
 
 # --- דף ניהול ראשי ---
+
+@app.route("/buisnes_admin")
+def buisnes_admin():
+    if not session.get("is_admin"):
+        return redirect("/login")
+    return render_template("buisnes_admin.html")
 
 @app.route("/main_admin")
 def main_admin():
@@ -756,11 +768,11 @@ def availability():
 
 @app.route("/")
 def index():
+    if "username" not in session:
+        return redirect("/login")
     week_slots = generate_week_slots()
     return render_template("index.html", week_slots=week_slots, services=services_prices)
-
-
-
+    
 # --- API - שאלות לבוט ---
 
 @app.route("/ask", methods=["POST"])
