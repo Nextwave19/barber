@@ -1,19 +1,16 @@
 {
   "users": [
     {
-      "username": "yoav",
-      "business": "barber_shop_1",
-      "password": null
+      "username": "myshop",
+      "password": "myshoppass",
+      "business": "My Awesome Shop",
+      "is_admin": false
     },
     {
-      "username": "michael",
-      "business": "nail_salon_2",
-      "password": null
-    },
-    {
-      "username": "admin",
-      "business": "all",
-      "password": "1234"
+      "username": "barbershop",
+      "password": "cut123",
+      "business": "Super Barber",
+      "is_admin": false
     }
   ]
 }
