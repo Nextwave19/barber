@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "username": "yoav",
+      "business": "barber_shop_1",
+      "password": null
+    },
+    {
+      "username": "michael",
+      "business": "nail_salon_2",
+      "password": null
+    },
+    {
+      "username": "admin",
+      "business": "all",
+      "password": "1234"
+    }
+  ]
+}
